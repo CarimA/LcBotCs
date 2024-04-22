@@ -1,0 +1,3 @@
+[submodule "PsimCsLib"]
+	path = PsimCsLib
+	url = git@github.com:CarimA/PsimCsLib.git
