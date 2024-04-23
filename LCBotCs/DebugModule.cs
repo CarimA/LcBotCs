@@ -4,7 +4,7 @@ using PsimCsLib.PubSub;
 
 namespace LCBotCs;
 
-public class DebugModule : ISubscriber<LoginSuccess>, ISubscriber<UnhandledCommand>,
+public class DebugModule : ISubscriber<LoginSuccess>, ISubscriber<NotImplementedCommand>,
     ISubscriber<SocketConnected>, ISubscriber<SocketDisconnected>
 {
     private readonly PsimClient _client;
@@ -14,7 +14,7 @@ public class DebugModule : ISubscriber<LoginSuccess>, ISubscriber<UnhandledComma
         _client = client;
     }
 
-    public async Task HandleEvent(UnhandledCommand e)
+    public async Task HandleEvent(NotImplementedCommand e)
     {
         Console.WriteLine($"{e.Data.Room}, {e.Data.Command}, {string.Join('|', e.Data.Arguments)}");
     }
