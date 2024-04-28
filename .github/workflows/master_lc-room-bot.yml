@@ -18,21 +18,6 @@ jobs:
         with:
           submodules: recursive
             
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_5435470EB4C34CCAA8F4D772926C551C }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_AD190726E4D8424CB9081125B1CB0FE6 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_DBE04983CA7F406581F2A39C119E3F27 }}
-
-      - name: Azure Container Apps Build and Deploy
-        uses: Azure/container-apps-deploy-action@v2
-        with:
-          appSourcePath: ${{ github.workspace }}
-          acrName: myregistry
-          containerAppName: lc-bot-cs-container
-          resourceGroup: lc-room-bot_group
-            
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v1
         with:
