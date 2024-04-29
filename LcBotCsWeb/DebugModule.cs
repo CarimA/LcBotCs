@@ -1,4 +1,5 @@
-﻿using PsimCsLib;
+﻿using System.Diagnostics;
+using PsimCsLib;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
 
@@ -16,25 +17,32 @@ public class DebugModule : ISubscriber<LoginSuccess>, ISubscriber<NotImplemented
 
     public async Task HandleEvent(NotImplementedCommand e)
     {
-        Console.WriteLine($"{e.Data.Room}, {e.Data.Command}, {string.Join('|', e.Data.Arguments)}");
+        Debug.WriteLine($"{e.Data.Room}, {e.Data.Command}, {string.Join('|', e.Data.Arguments)}");
     }
 
     public async Task HandleEvent(LoginSuccess e)
     {
-        Console.WriteLine("Joining LC...");
+        Debug.WriteLine("Joining LC...");
 
         await _client.SetAvatar("supernerd");
+        
         await _client.Rooms.Join("littlecup");
-        //await client.Rooms.Join("botdevelopment");
+        await _client.Rooms.Join("botdevelopment");
+        await _client.Rooms.Join("tournaments");
+        await _client.Rooms.Join("help");
+        await _client.Rooms.Join("ruinsofalph");
+        await _client.Rooms.Join("monotype");
+        await _client.Rooms.Join("othermetas");
+        await _client.Rooms.Join("techcode");
     }
 
     public async Task HandleEvent(SocketConnected e)
     {
-        Console.WriteLine("Connected client");
+        Debug.WriteLine("Connected client");
     }
 
     public async Task HandleEvent(SocketDisconnected e)
     {
-        Console.WriteLine($"{e.CloseStatus}: {e.Reason}");
+        Debug.WriteLine($"{e.CloseStatus}: {e.Reason}");
     }
 }
