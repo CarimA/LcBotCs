@@ -12,12 +12,8 @@ public class RoomBotService : BackgroundService
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-
         while (!stoppingToken.IsCancellationRequested)
         {
-            using var scope = _scopeFactory.CreateScope(); 
-            
-            DotNetEnv.Env.Load();
             var options = new PsimClientOptions()
             {
                 Username = Environment.GetEnvironmentVariable("PSIM_USERNAME") ?? throw new EnvVariableNotFoundException("PSIM_USERNAME not found", nameof(PsimClientOptions)),
@@ -27,8 +23,7 @@ public class RoomBotService : BackgroundService
             var client = new PsimClient(options);
             client.Subscribe(new DebugModule(client));
 
-            await client.Connect();
-
+            await client.Connect(true);
             await Task.Delay(500);
         }
     }
