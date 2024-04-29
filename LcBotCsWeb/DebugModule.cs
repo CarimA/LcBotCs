@@ -22,18 +22,11 @@ public class DebugModule : ISubscriber<LoginSuccess>, ISubscriber<NotImplemented
 
     public async Task HandleEvent(LoginSuccess e)
     {
-        Debug.WriteLine("Joining LC...");
+        Debug.WriteLine("Joining botdev...");
 
         await _client.SetAvatar("supernerd");
         
-        await _client.Rooms.Join("littlecup");
         await _client.Rooms.Join("botdevelopment");
-        await _client.Rooms.Join("tournaments");
-        await _client.Rooms.Join("help");
-        await _client.Rooms.Join("ruinsofalph");
-        await _client.Rooms.Join("monotype");
-        await _client.Rooms.Join("othermetas");
-        await _client.Rooms.Join("techcode");
     }
 
     public async Task HandleEvent(SocketConnected e)
