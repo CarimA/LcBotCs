@@ -2,6 +2,7 @@ using DotNetEnv;
 using LcBotCsWeb.Cache;
 using LcBotCsWeb.Modules;
 using LcBotCsWeb.Services;
+using Microsoft.Extensions.FileProviders;
 using PsimCsLib;
 using PsimCsLib.PubSub;
 
@@ -23,6 +24,12 @@ builder.Services.AddSingleton<ICache, MemoryCache>();
 builder.Services.AddSingleton<ISubscriber, DebugModule>();
 
 var app = builder.Build();
+
+app.UseStaticFiles(new StaticFileOptions()
+{
+    FileProvider = new PhysicalFileProvider(Path.Combine(AppContext.BaseDirectory, "Static")),
+    RequestPath = "/public"
+});
 
 app.MapGet("/", () => "Hello World!");
 
