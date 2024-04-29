@@ -4,7 +4,6 @@ using LcBotCsWeb;
 DotNetEnv.Env.Load();
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Logging.AddAzureWebAppDiagnostics();
 builder.Services.AddSingleton<IHostedService, RoomBotService>();
 builder.Services.AddSingleton<ICache, MemoryCache>();
 
