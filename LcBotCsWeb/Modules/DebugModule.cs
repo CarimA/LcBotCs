@@ -1,9 +1,9 @@
-﻿using System.Diagnostics;
-using PsimCsLib;
+﻿using PsimCsLib;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
+using System.Diagnostics;
 
-namespace LCBotCs;
+namespace LcBotCsWeb.Modules;
 
 public class DebugModule : ISubscriber<LoginSuccess>, ISubscriber<NotImplementedCommand>,
     ISubscriber<SocketConnected>, ISubscriber<SocketDisconnected>
@@ -25,7 +25,7 @@ public class DebugModule : ISubscriber<LoginSuccess>, ISubscriber<NotImplemented
         Debug.WriteLine("Joining botdev...");
 
         await _client.SetAvatar("supernerd");
-        
+
         await _client.Rooms.Join("botdevelopment");
     }
 

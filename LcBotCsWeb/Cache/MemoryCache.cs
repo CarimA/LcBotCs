@@ -1,4 +1,4 @@
-﻿namespace LCBotCs;
+﻿namespace LcBotCsWeb.Cache;
 
 public class MemoryCache : ICache
 {

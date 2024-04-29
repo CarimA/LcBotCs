@@ -1,4 +1,4 @@
-﻿namespace LCBotCs;
+﻿namespace LcBotCsWeb.Repository;
 
 public interface IRepository<T>
 {

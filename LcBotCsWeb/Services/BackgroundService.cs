@@ -1,4 +1,4 @@
-namespace LcBotCsWeb;
+namespace LcBotCsWeb.Services;
 
 /// Copyright(c) .NET Foundation.Licensed under the Apache License, Version 2.0.
 /// <summary>

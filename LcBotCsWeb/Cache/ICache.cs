@@ -1,4 +1,4 @@
-﻿namespace LCBotCs;
+﻿namespace LcBotCsWeb.Cache;
 public interface ICache
 {
     Task<bool> Set<T>(string key, T obj, TimeSpan timeToLive) where T : class;
