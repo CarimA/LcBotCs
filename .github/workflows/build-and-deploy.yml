@@ -1,7 +1,7 @@
 # Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
 # More GitHub Actions for Azure: https://github.com/Azure/actions
 
-name: Build and deploy ASP.Net Core app to Azure Web App - lc-room-bot
+name: Build and deploy ASP.Net Core app to Azure Web App - psim-bot
 
 on:
   push:
@@ -17,7 +17,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-            
+
       - name: Set up .NET Core
         uses: actions/setup-dotnet@v1
         with:
@@ -54,15 +54,15 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_5435470EB4C34CCAA8F4D772926C551C }}
-          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_AD190726E4D8424CB9081125B1CB0FE6 }}
-          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_DBE04983CA7F406581F2A39C119E3F27 }}
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_2852D28871784C30B26E3FE85A6DA681 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_DE144D1CD85D46E9952E06A9E1840E41 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_48A0C61BDC8B45A6A9425D79B6C9E92C }}
 
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'lc-room-bot'
+          app-name: 'psim-bot'
           slot-name: 'Production'
           package: .
           
