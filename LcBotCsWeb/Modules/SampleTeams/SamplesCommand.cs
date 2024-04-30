@@ -31,19 +31,12 @@ namespace LcBotCsWeb.Modules.SampleTeams
                     }
 
                     var html = TeamHtmlFormatter.Generate(results);
-                    await e.Sender.Send($"!code {html}");
+                    await e.Sender.Send($"/msgroom lc, /sendhtmlpage {e.Sender.Name.DisplayName}, expanded-samples,{html}");
                 }
-                catch (HttpRequestException ex)
+                catch (HttpRequestException _)
                 {
                     await e.Sender.Send("There was an error handling your request. Try again later.");
                 }
-            }
-
-            if (e.Message.StartsWith("-refreshsamples"))
-            {
-                Debug.WriteLine($"message from: {e.Sender.Name.DisplayName}");
-                await _sampleTeamService.CacheSamples();
-                await e.Sender.Send("samples cached (probably)");
             }
         }
     }
