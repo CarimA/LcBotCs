@@ -32,7 +32,7 @@ public class DatabaseCache : ICache
         if (result == null)
             return null;
 
-        if (result.Expires > DateTime.Now) 
+        if (result.Expires > DateTime.Now)
             if (result.Object is T t)
                 return t;
 
