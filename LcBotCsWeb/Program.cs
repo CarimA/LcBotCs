@@ -1,4 +1,5 @@
 using DotNetEnv;
+using LcBotCsWeb;
 using LcBotCsWeb.Cache;
 using LcBotCsWeb.Database;
 using LcBotCsWeb.Modules;
@@ -41,6 +42,10 @@ else
 
 // Register bot modules
 builder.Services.AddSingleton<ISubscriber, DebugModule>();
+
+//register samples command
+builder.Services.AddSingleton<SampleTeamService>();
+builder.Services.AddSingleton<ISubscriber, SamplesCommand>();
 
 var app = builder.Build();
 
