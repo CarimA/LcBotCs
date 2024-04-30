@@ -1,12 +1,19 @@
 using DotNetEnv;
 using LcBotCsWeb.Cache;
+using LcBotCsWeb.Database;
 using LcBotCsWeb.Modules;
 using LcBotCsWeb.Services;
 using Microsoft.Extensions.FileProviders;
 using PsimCsLib;
+using PsimCsLib.Models;
 using PsimCsLib.PubSub;
 
 DotNetEnv.Env.Load();
+
+string GetEnvVar(string key, string container)
+{
+    return Environment.GetEnvironmentVariable(key) ?? throw new EnvVariableNotFoundException($"{key} not found", nameof(PsimClientOptions));
+}
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,11 +21,19 @@ builder.Services.AddSingleton<IHostedService, RoomBotService>();
 builder.Services.AddSingleton<PsimClient>();
 builder.Services.AddSingleton(new PsimClientOptions()
 {
-    Username = Environment.GetEnvironmentVariable("PSIM_USERNAME") ?? throw new EnvVariableNotFoundException("PSIM_USERNAME not found", nameof(PsimClientOptions)),
-    Password = Environment.GetEnvironmentVariable("PSIM_PASSWORD") ?? throw new EnvVariableNotFoundException("PSIM_PASSWORD not found", nameof(PsimClientOptions))
+    Username = GetEnvVar("PSIM_USERNAME", nameof(PsimClientOptions)),
+    Password = GetEnvVar("PSIM_PASSWORD", nameof(PsimClientOptions))
 });
 
-builder.Services.AddSingleton<ICache, MemoryCache>();
+builder.Services.AddSingleton<IDatabase, MongoDbDatabase>();
+builder.Services.AddSingleton(new MongoDbDatabaseOptions()
+{
+    ConnectionString = GetEnvVar("MONGODB_CONNECTION_STRING", nameof(MongoDbDatabaseOptions)),
+    DatabaseName = GetEnvVar("DATABASE_NAME", nameof(MongoDbDatabaseOptions)),
+    CacheCollectionName = GetEnvVar("DATABASE_CACHE_COLLECTION", nameof(MongoDbDatabaseOptions))
+});
+
+builder.Services.AddSingleton<ICache, DatabaseCache>();
 
 // Register bot modules
 builder.Services.AddSingleton<ISubscriber, DebugModule>();

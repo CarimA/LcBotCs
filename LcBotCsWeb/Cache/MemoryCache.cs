@@ -2,18 +2,6 @@
 
 public class MemoryCache : ICache
 {
-    private class MemoryCachedObject
-    {
-        public DateTime Expires { get; }
-        public object Object { get; }
-
-        public MemoryCachedObject(object obj, DateTime expires)
-        {
-            Object = obj;
-            Expires = expires;
-        }
-    }
-
     private readonly Dictionary<string, MemoryCachedObject> _cache;
 
     public MemoryCache()
@@ -21,7 +9,7 @@ public class MemoryCache : ICache
         _cache = new Dictionary<string, MemoryCachedObject>();
     }
 
-    public Task<bool> Set<T>(string key, T obj, TimeSpan timeToLive) where T : class
+    public Task<bool> Set(string key, object obj, TimeSpan timeToLive)
         => Task.FromResult(_cache.TryAdd(key, new MemoryCachedObject(obj, DateTime.Now + timeToLive)));
 
     public Task<bool> Delete(string key)
@@ -68,7 +56,7 @@ public class MemoryCache : ICache
         var toRemove = new List<string>();
 
         foreach (var (key, value) in _cache)
-            if (value.Expires >= DateTime.Now)
+            if (value.Expires < DateTime.Now)
                 toRemove.Add(key);
 
         foreach (var key in toRemove)

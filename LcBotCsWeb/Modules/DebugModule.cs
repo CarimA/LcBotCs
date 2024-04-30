@@ -1,4 +1,5 @@
-﻿using PsimCsLib;
+﻿using LcBotCsWeb.Database;
+using PsimCsLib;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
 using System.Diagnostics;
@@ -9,10 +10,12 @@ public class DebugModule : ISubscriber<LoginSuccess>, ISubscriber<NotImplemented
     ISubscriber<SocketConnected>, ISubscriber<SocketDisconnected>
 {
     private readonly PsimClient _client;
+    private readonly IDatabase _db;
 
-    public DebugModule(PsimClient client)
+    public DebugModule(PsimClient client, IDatabase db)
     {
         _client = client;
+        _db = db;
     }
 
     public async Task HandleEvent(NotImplementedCommand e)
