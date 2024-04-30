@@ -1,6 +1,6 @@
-﻿namespace LcBotCsWeb.Database;
+﻿namespace LcBotCsWeb.Data.Models;
 
-public class MongoDbDatabaseOptions
+public class DatabaseOptions
 {
     public string ConnectionString { get; set; }
 

@@ -1,16 +1,19 @@
-﻿namespace LcBotCsWeb.Cache;
+﻿using LcBotCsWeb.Data.Interfaces;
+using LcBotCsWeb.Data.Models;
+
+namespace LcBotCsWeb.Data.Services;
 
 public class MemoryCache : ICache
 {
-    private readonly Dictionary<string, MemoryCachedObject> _cache;
+    private readonly Dictionary<string, CachedItem> _cache;
 
     public MemoryCache()
     {
-        _cache = new Dictionary<string, MemoryCachedObject>();
+        _cache = new Dictionary<string, CachedItem>();
     }
 
     public Task<bool> Set(string key, object obj, TimeSpan timeToLive)
-        => Task.FromResult(_cache.TryAdd(key, new MemoryCachedObject(obj, DateTime.Now + timeToLive)));
+        => Task.FromResult(_cache.TryAdd(key, new CachedItem(key, obj, DateTime.UtcNow + timeToLive)));
 
     public Task<bool> Delete(string key)
         => Task.FromResult(_cache.Remove(key));
@@ -21,7 +24,7 @@ public class MemoryCache : ICache
         if (!_cache.TryGetValue(key, out var obj))
             return null;
 
-        if (obj.Expires <= DateTime.Now)
+        if (obj.Expires <= DateTime.UtcNow)
         {
             await Delete(key);
             return null;
@@ -56,7 +59,7 @@ public class MemoryCache : ICache
         var toRemove = new List<string>();
 
         foreach (var (key, value) in _cache)
-            if (value.Expires < DateTime.Now)
+            if (value.Expires < DateTime.UtcNow)
                 toRemove.Add(key);
 
         foreach (var key in toRemove)

@@ -1,19 +1,25 @@
-﻿using LcBotCsWeb.Cache;
-using LcBotCsWeb.Database.Repository;
+﻿using System.Diagnostics;
+using LcBotCsWeb.Data.Models;
 using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
-using System.Diagnostics;
+using MongoDB.Driver.Linq;
 
-namespace LcBotCsWeb.Database;
+namespace LcBotCsWeb.Data.Repositories;
 
-public class MongoDbDatabase : IDatabase
+public class Database
 {
-    public IRepository<DatabaseCachedObject>? Cache { get; }
+    public Repository<DatabaseObjectWrapper<CachedItem>>? Cache { get; }
 
-    public MongoDbDatabase(MongoDbDatabaseOptions options)
+    public Database(DatabaseOptions options)
     {
         var settings = MongoClientSettings.FromConnectionString(options.ConnectionString);
         settings.ServerApi = new ServerApi(ServerApiVersion.V1);
+        settings.LinqProvider = LinqProvider.V3;
+
+        var objectSerializer = new ObjectSerializer(ObjectSerializer.AllAllowedTypes);
+        BsonSerializer.RegisterSerializer(objectSerializer);
 
         var client = new MongoClient(settings);
 
@@ -26,8 +32,7 @@ public class MongoDbDatabase : IDatabase
 
             if (!string.IsNullOrWhiteSpace(options.CacheCollectionName))
             {
-                Cache = new MongoDbRepository<DatabaseCachedObject>(
-                    database.GetCollection<DatabaseCachedObject>(options.CacheCollectionName));
+                Cache = new Repository<DatabaseObjectWrapper<CachedItem>>(database.GetCollection<DatabaseObjectWrapper<CachedItem>>(options.CacheCollectionName));
             }
         }
         catch (Exception ex)

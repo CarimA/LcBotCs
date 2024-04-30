@@ -1,15 +1,16 @@
-﻿using MongoDB.Bson;
+﻿using System.Linq.Expressions;
+using LcBotCsWeb.Data.Models;
+using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
-using System.Linq.Expressions;
 
-namespace LcBotCsWeb.Database.Repository;
+namespace LcBotCsWeb.Data.Repositories;
 
-public class MongoDbRepository<T> : IRepository<T> where T : DatabaseObject
+public class Repository<T> where T : DatabaseObject
 {
     private readonly IMongoCollection<T> _collection;
 
-    public MongoDbRepository(IMongoCollection<T> collection)
+    public Repository(IMongoCollection<T> collection)
     {
         _collection = collection;
     }
@@ -33,13 +34,13 @@ public class MongoDbRepository<T> : IRepository<T> where T : DatabaseObject
 
     public async Task Update(T item)
     {
-        item.DateModified = DateTime.Now;
+        item.DateModified = DateTime.UtcNow;
         await _collection.ReplaceOneAsync(MatchById(item), item);
     }
 
     public async Task Upsert(T item)
     {
-        item.DateModified = DateTime.Now;
+        item.DateModified = DateTime.UtcNow;
         await _collection.ReplaceOneAsync(MatchById(item), item, new ReplaceOptions() { IsUpsert = true });
     }
 
@@ -50,9 +51,13 @@ public class MongoDbRepository<T> : IRepository<T> where T : DatabaseObject
 
     public async Task<T> FindOne(string id)
     {
-        var objectId = new ObjectId(id);
-        var result = await _collection.FindAsync(Builders<T>.Filter.Eq(r => r.Id, objectId));
+        var result = await _collection.FindAsync(item => item.Id == ObjectId.Parse(id));
         return await result.FirstOrDefaultAsync();
+    }
+
+    public Task<T> FindOne(int id)
+    {
+        throw new NotSupportedException();
     }
 
     public async Task<List<T>> Find(Expression<Func<T, bool>> predicate)
