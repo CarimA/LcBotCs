@@ -49,6 +49,7 @@ public class DebugModule : ISubscriber<LoginSuccess>, ISubscriber<NotImplemented
         await _client.SetAvatar("supernerd");
 
         await _client.Rooms.Join("botdevelopment");
+        await _client.Rooms.Join("littlecup");
     }
 
     public async Task HandleEvent(SocketConnected e)

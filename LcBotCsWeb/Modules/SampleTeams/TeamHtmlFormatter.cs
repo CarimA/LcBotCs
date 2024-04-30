@@ -1,6 +1,4 @@
-﻿using System.Text;
-
-public class TeamHtmlFormatter
+﻿public class TeamHtmlFormatter
 {
     public static string Generate(TeamPreview team)
     {
