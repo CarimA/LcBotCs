@@ -1,11 +1,6 @@
-﻿using LcBotCsWeb.Cache;
-using Microsoft.Extensions.Caching.Memory;
-using PsimCsLib;
+﻿using LcBotCsWeb.Data.Interfaces;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
-using System.Net.Http;
-using System.Text.RegularExpressions;
-using System.Web;
 
 namespace LcBotCsWeb
 {
@@ -24,7 +19,7 @@ namespace LcBotCsWeb
         {
             if (e.Message.StartsWith("-samples"))
             {
-                System.Diagnostics.Debug.WriteLine($"message from: {e.Sender.DisplayName}");
+                System.Diagnostics.Debug.WriteLine($"message from: {e.Sender.Name.DisplayName}");
                 string format = e.Message.Split(' ')[1];
 
                 string html = await _memoryCache.Get<string>(format);
@@ -55,7 +50,7 @@ namespace LcBotCsWeb
 
             if (e.Message.StartsWith("-refreshsamples"))
             {
-                System.Diagnostics.Debug.WriteLine($"message from: {e.Sender.DisplayName}");
+                System.Diagnostics.Debug.WriteLine($"message from: {e.Sender.Name.DisplayName}");
                 await _sampleTeamService.CacheSamples();
                 await e.Sender.Send("samples cached (probably)");
             }
