@@ -1,4 +1,5 @@
-﻿using LcBotCsWeb.Data.Interfaces;
+﻿using System.Diagnostics;
+using LcBotCsWeb.Data.Interfaces;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
 
@@ -6,12 +7,12 @@ namespace LcBotCsWeb
 {
     public class SamplesCommand : ISubscriber<PrivateMessage>
     {
-        private readonly ICache _memoryCache;
+        private readonly ICache _cache;
         private readonly SampleTeamService _sampleTeamService;
 
-        public SamplesCommand(ICache memoryCache, SampleTeamService sampleTeamService)
+        public SamplesCommand(ICache cache, SampleTeamService sampleTeamService)
         {
-            _memoryCache = memoryCache;
+            _cache = cache;
             _sampleTeamService = sampleTeamService;
         }
 
@@ -19,17 +20,17 @@ namespace LcBotCsWeb
         {
             if (e.Message.StartsWith("-samples"))
             {
-                System.Diagnostics.Debug.WriteLine($"message from: {e.Sender.Name.DisplayName}");
-                string format = e.Message.Split(' ')[1];
+                Debug.WriteLine($"message from: {e.Sender.Name.DisplayName}");
 
-                string html = await _memoryCache.Get<string>(format);
+                var format = e.Message.Split(' ')[1];
+                var html = await _cache.Get<string>(format);
 
                 //try to get samples from cache
                 if (html != null)
                 {
                     await e.Sender.Send("!code " + html);
                 }
-                else if (_sampleTeamService.formatSamples.ContainsKey(format))
+                else if (_sampleTeamService.FormatSamples.ContainsKey(format))
                 {
                     await e.Sender.Send("samples not found, caching samples...");
                     await _sampleTeamService.CacheSamples();
@@ -50,7 +51,7 @@ namespace LcBotCsWeb
 
             if (e.Message.StartsWith("-refreshsamples"))
             {
-                System.Diagnostics.Debug.WriteLine($"message from: {e.Sender.Name.DisplayName}");
+                Debug.WriteLine($"message from: {e.Sender.Name.DisplayName}");
                 await _sampleTeamService.CacheSamples();
                 await e.Sender.Send("samples cached (probably)");
             }
