@@ -33,7 +33,7 @@ public class MemoryCache : ICache
         if (!_cache.TryGetValue(key, out var obj))
             return null;
 
-        if (obj.Expires >= DateTime.Now)
+        if (obj.Expires <= DateTime.Now)
         {
             await Delete(key);
             return null;
