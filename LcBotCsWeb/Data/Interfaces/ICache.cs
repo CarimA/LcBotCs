@@ -1,4 +1,4 @@
-﻿namespace LcBotCsWeb.Cache;
+﻿namespace LcBotCsWeb.Data.Interfaces;
 
 public interface ICache
 {

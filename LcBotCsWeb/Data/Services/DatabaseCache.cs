@@ -1,42 +1,42 @@
-﻿using LcBotCsWeb.Database;
-using LcBotCsWeb.Database.Repository;
+﻿using LcBotCsWeb.Data.Interfaces;
+using LcBotCsWeb.Data.Models;
+using LcBotCsWeb.Data.Repositories;
 
-namespace LcBotCsWeb.Cache;
+namespace LcBotCsWeb.Data.Services;
 
 public class DatabaseCache : ICache
 {
-    private readonly IRepository<DatabaseCachedObject> _collection;
+    private readonly Repository<DatabaseObjectWrapper<CachedItem>> _collection;
 
-    public DatabaseCache(IDatabase database)
+    public DatabaseCache(Database database)
     {
         _collection = database.Cache;
     }
 
     public async Task<bool> Set(string key, object obj, TimeSpan timeToLive)
     {
-        await _collection.Upsert(new DatabaseCachedObject(key, obj, DateTime.Now + timeToLive));
+        await _collection.Upsert(new DatabaseObjectWrapper<CachedItem>() { Data = new CachedItem(key, obj, DateTime.UtcNow + timeToLive) });
         return true;
     }
 
     public async Task<bool> Delete(string key)
     {
-        var num = await _collection.Delete(item => item.Key == key);
+        var num = await _collection.Delete(item => item.Data.Key == key);
         return num > 0;
     }
 
-
     public async Task<T?> Get<T>(string key) where T : class
     {
-        var result = (await _collection.Find(item => item.Key == key)).FirstOrDefault();
+        var result = (await _collection.Find(item => item.Data.Key == key)).FirstOrDefault();
 
         if (result == null)
             return null;
 
-        if (result.Expires > DateTime.Now)
-            if (result.Object is T t)
+        if (result.Data.Expires > DateTime.UtcNow)
+            if (result.Data.Object is T t)
                 return t;
 
-        await Delete(result.Key);
+        await Delete(result.Data.Key);
         return null;
     }
 
@@ -59,6 +59,6 @@ public class DatabaseCache : ICache
 
     public async Task Cleanup()
     {
-        await _collection.Delete(item => item.Expires < DateTime.Now);
+        await _collection.Delete(item => item.Data.Expires < DateTime.UtcNow);
     }
 }

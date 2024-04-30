@@ -1,6 +1,8 @@
 using DotNetEnv;
-using LcBotCsWeb.Cache;
-using LcBotCsWeb.Database;
+using LcBotCsWeb.Data.Interfaces;
+using LcBotCsWeb.Data.Models;
+using LcBotCsWeb.Data.Repositories;
+using LcBotCsWeb.Data.Services;
 using LcBotCsWeb.Modules;
 using LcBotCsWeb.Services;
 using Microsoft.Extensions.FileProviders;
@@ -24,13 +26,13 @@ builder.Services.AddSingleton(new PsimClientOptions()
     Password = GetEnvVar("PSIM_PASSWORD", nameof(PsimClientOptions))
 });
 
-builder.Services.AddSingleton<IDatabase, MongoDbDatabase>();
-
 var cache = Environment.GetEnvironmentVariable("DATABASE_CACHE_COLLECTION");
-builder.Services.AddSingleton(new MongoDbDatabaseOptions()
+
+builder.Services.AddSingleton<Database>();
+builder.Services.AddSingleton(new DatabaseOptions()
 {
-    ConnectionString = GetEnvVar("MONGODB_CONNECTION_STRING", nameof(MongoDbDatabaseOptions)),
-    DatabaseName = GetEnvVar("DATABASE_NAME", nameof(MongoDbDatabaseOptions)),
+    ConnectionString = GetEnvVar("MONGODB_CONNECTION_STRING", nameof(DatabaseOptions)),
+    DatabaseName = GetEnvVar("DATABASE_NAME", nameof(DatabaseOptions)),
     CacheCollectionName = cache
 });
 
