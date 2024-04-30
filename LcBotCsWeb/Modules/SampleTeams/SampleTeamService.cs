@@ -56,6 +56,7 @@ namespace LcBotCsWeb.Modules.SampleTeams
             var pastes = Regex
                 .Matches(post, @"(https:\/\/pokepast\.es\/)\w+", RegexOptions.IgnoreCase)
                 .Select(match => match.Value)
+                .Distinct()
                 .ToList();
 
             return pastes;
