@@ -1,10 +1,10 @@
 using DotNetEnv;
-using LcBotCsWeb;
 using LcBotCsWeb.Data.Interfaces;
 using LcBotCsWeb.Data.Models;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Data.Services;
 using LcBotCsWeb.Modules;
+using LcBotCsWeb.Modules.SampleTeams;
 using LcBotCsWeb.Services;
 using Microsoft.Extensions.FileProviders;
 using PsimCsLib;

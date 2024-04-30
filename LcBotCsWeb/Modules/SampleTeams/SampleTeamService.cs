@@ -2,19 +2,22 @@
 using System.Text.RegularExpressions;
 using System.Web;
 
-namespace LcBotCsWeb
+namespace LcBotCsWeb.Modules.SampleTeams
 {
     public class SampleTeamService
     {
-        private readonly ICache _memoryCache;
-        static readonly HttpClient http_client = new HttpClient();
+        private readonly ICache _cache;
+        private readonly HttpClient _httpClient;
 
-        public SampleTeamService(ICache memoryCache) =>
-            _memoryCache = memoryCache;
+        public SampleTeamService(ICache cache)
+        {
+            _cache = cache;
+            _httpClient = new HttpClient();
+        }
 
         //define sample team links. note that the post number is REQUIRED even for original posts of threads
         //you can get the post number from replying to the original post or from inspecting element
-        public Dictionary<string, string> formatSamples =
+        public Dictionary<string, string> FormatSamples =
         new Dictionary<string, string>        {
             { "gen1lc", ""}, //samples planned to be put up sometime after may 5 2024 according to sabelette
             { "gen2lc", "https://www.smogon.com/forums/threads/gsc-little-cup.3736694/post-9981182" },
@@ -27,53 +30,59 @@ namespace LcBotCsWeb
             { "gen9lc", "https://www.smogon.com/forums/threads/sv-lc-sample-teams.3712989/post-9439821" },
         };
 
+        public async Task<Team?> GetFormat(string format)
+        {
+            return new Team();
+        }
+
         public async Task CacheSamples()
         {
-            foreach (KeyValuePair<string, string> entry in formatSamples)
+            foreach (var (format, thread) in FormatSamples)
             {
-                string format = entry.Key;
-                string html = "";
-                if (!string.IsNullOrEmpty(entry.Value))
+                var html = string.Empty;
+
+                if (!string.IsNullOrEmpty(thread))
                 {
-                    html = await GenerateSamplesHTML(await GrabPokepastesFromSampleThread(format));
+                    html = await GenerateSamplesHtml(await GrabPokepastesFromSampleThread(format));
                 }
                 else
                 {
                     html = "No samples available for this format :(";
                 }
 
-                await _memoryCache.Set(format, html, TimeSpan.FromMilliseconds(86400000));
+                await _cache.Set(format, html, TimeSpan.FromDays(1));
             }
         }
 
 
         public async Task<List<string>> GrabPokepastesFromSampleThread(string format)
         {
-            string samples_thread = formatSamples[format];
-            string post_id = Regex.Match(samples_thread, @"(?<=post-)(.*)").Value;
-            string response_body = await http_client.GetStringAsync(samples_thread);
-            string sample_teams_post = Regex.Match(response_body, @"(?<=js-post-" + post_id + @")(.*?)(?=</article>)", RegexOptions.Singleline).Value;
+            var samplesThread = FormatSamples[format];
+            var postId = Regex.Match(samplesThread, @"(?<=post-)(.*)").Value;
+            var responseBody = await _httpClient.GetStringAsync(samplesThread);
+            var sampleTeamsPost = Regex.Match(responseBody, @"(?<=js-post-" + postId + @")(.*?)(?=</article>)", RegexOptions.Singleline).Value;
 
-            List<string> pokepaste_list = new List<string> { };
-            foreach (Match match in Regex.Matches(sample_teams_post, @"(https:\/\/pokepast\.es\/)\w+", RegexOptions.IgnoreCase))
+            var pokepasteList = new List<string> { };
+            foreach (Match match in Regex.Matches(sampleTeamsPost, @"(https:\/\/pokepast\.es\/)\w+", RegexOptions.IgnoreCase))
             {
-                pokepaste_list.Add(match.Value);
+                pokepasteList.Add(match.Value);
             }
-            return pokepaste_list;
+            return pokepasteList;
         }
-        public async Task<string> GenerateSamplesHTML(List<string> pokepastes)
+
+        public async Task<string> GenerateSamplesHtml(List<string> pokepastes)
         {
-            string html = "";
-            foreach (string pokepaste in pokepastes)
+            var html = "";
+            foreach (var pokepaste in pokepastes)
             {
                 try
                 {
                     //grab pokepaste source
-                    string responseBody = await http_client.GetStringAsync(pokepaste);
+                    var responseBody = await _httpClient.GetStringAsync(pokepaste);
 
                     //grab author and title
-                    string author_name = Regex.Match(responseBody, @"(?<=<h2>&nbsp;by )(.*?)(?=</h2>)", RegexOptions.Singleline).Value;
-                    string team_name = HttpUtility.HtmlDecode(Regex.Match(responseBody, @"(?<=<h1>)(.*?)(?=</h1>)", RegexOptions.Singleline).Value);
+                    var authorName = Regex.Match(responseBody, @"(?<=<h2>&nbsp;by )(.*?)(?=</h2>)", RegexOptions.Singleline).Value;
+                    var teamName = HttpUtility.HtmlDecode(Regex.Match(responseBody, @"(?<=<h1>)(.*?)(?=</h1>)", RegexOptions.Singleline).Value);
 
                     //grab pokemon names
                     foreach (Match match in Regex.Matches(responseBody, @"(?<=<pre><span class=)(.*?)(?=</span>)", RegexOptions.Singleline))
@@ -84,13 +93,13 @@ namespace LcBotCsWeb
                         html += "\"> ";
                     }
                     html += "</br><a href=\"" + pokepaste + "\">";
-                    html += team_name;
+                    html += teamName;
                     html += "</a> by ";
-                    html += author_name;
+                    html += authorName;
                     html += "</br>";
 
                 }
-                catch (HttpRequestException h_e)
+                catch (HttpRequestException ex)
                 {
                     //todo (lol)
                 }
