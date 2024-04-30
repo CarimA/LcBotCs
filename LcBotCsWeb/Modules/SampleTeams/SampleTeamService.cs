@@ -1,6 +1,6 @@
 ﻿using LcBotCsWeb.Data.Interfaces;
 using System.Text.RegularExpressions;
-using System.Web;
+using Newtonsoft.Json.Linq;
 
 namespace LcBotCsWeb.Modules.SampleTeams
 {
@@ -8,103 +8,96 @@ namespace LcBotCsWeb.Modules.SampleTeams
     {
         private readonly ICache _cache;
         private readonly HttpClient _httpClient;
+        private readonly Dictionary<string, string> _formatSamples;
 
         public SampleTeamService(ICache cache)
         {
             _cache = cache;
             _httpClient = new HttpClient();
+
+            _formatSamples =
+                new Dictionary<string, string>
+                {
+                    { "gen2lc", "https://www.smogon.com/forums/threads/gsc-little-cup.3736694/post-9981182" },
+                    { "gen3lc", "https://www.smogon.com/forums/threads/adv-lc.3722418/post-9647417" },
+                    { "gen5lc", "https://www.smogon.com/forums/threads/bw-lc.3676193/post-8713480" },
+                    { "gen6lc", "https://www.smogon.com/forums/threads/oras-lc.3680254/post-8788793" },
+                    { "gen7lc", "https://www.smogon.com/forums/threads/sm-lc.3698490/post-9139651" },
+                    { "gen8lc", "https://www.smogon.com/forums/threads/ss-lc.3724530/post-9702239" },
+                    { "gen9lc", "https://www.smogon.com/forums/threads/sv-lc-sample-teams.3712989/post-9439821" },
+                };
         }
 
-        //define sample team links. note that the post number is REQUIRED even for original posts of threads
-        //you can get the post number from replying to the original post or from inspecting element
-        public Dictionary<string, string> FormatSamples =
-        new Dictionary<string, string>        {
-            { "gen1lc", ""}, //samples planned to be put up sometime after may 5 2024 according to sabelette
-            { "gen2lc", "https://www.smogon.com/forums/threads/gsc-little-cup.3736694/post-9981182" },
-            { "gen3lc", "https://www.smogon.com/forums/threads/adv-lc.3722418/post-9647417" },
-            { "gen4lc", "" }, //no concrete plans for samples. in a worst case i (grape tylenol) play this meta and could try to gather some and ask tazz to put them up, or post them myself
-            { "gen5lc", "https://www.smogon.com/forums/threads/bw-lc.3676193/post-8713480" },
-            { "gen6lc", "https://www.smogon.com/forums/threads/oras-lc.3680254/post-8788793" },
-            { "gen7lc", "https://www.smogon.com/forums/threads/sm-lc.3698490/post-9139651" },
-            { "gen8lc", "https://www.smogon.com/forums/threads/ss-lc.3724530/post-9702239" },
-            { "gen9lc", "https://www.smogon.com/forums/threads/sv-lc-sample-teams.3712989/post-9439821" },
-        };
-
-        public async Task<Team?> GetFormat(string format)
+        public async Task<List<TeamPreview>?> GetFormat(string format)
         {
-            return new Team();
+            format = format.ToLowerInvariant().Trim();
+
+            if (!_formatSamples.ContainsKey(format))
+                return null;
+
+            var results = await _cache.Get($"samples-{format}", () => GenerateFormat(format), TimeSpan.FromDays(1));
+            return results;
         }
 
-        public async Task CacheSamples()
+        private async Task<List<TeamPreview>> GenerateFormat(string format)
         {
-            foreach (var (format, thread) in FormatSamples)
-            {
-                var html = string.Empty;
-
-                if (!string.IsNullOrEmpty(thread))
-                {
-                    html = await GenerateSamplesHtml(await GrabPokepastesFromSampleThread(format));
-                }
-                else
-                {
-                    html = "No samples available for this format :(";
-                }
-
-                await _cache.Set(format, html, TimeSpan.FromDays(1));
-            }
+            var pastes = await ScrapePokepastes(_formatSamples[format]);
+            var teams = await GenerateSampleTeams(pastes);
+            return teams;
         }
 
-
-        public async Task<List<string>> GrabPokepastesFromSampleThread(string format)
+        private async Task<List<string>> ScrapePokepastes(string smogonThread)
         {
-            var samplesThread = FormatSamples[format];
-            var postId = Regex.Match(samplesThread, @"(?<=post-)(.*)").Value;
-            var responseBody = await _httpClient.GetStringAsync(samplesThread);
-            var sampleTeamsPost = Regex.Match(responseBody, @"(?<=js-post-" + postId + @")(.*?)(?=</article>)", RegexOptions.Singleline).Value;
+            var postId = Regex.Match(smogonThread, @"(?<=post-)(.*)").Value;
+            var response = await _httpClient.GetStringAsync(smogonThread);
+            var post = Regex.Match(response, @"(?<=js-post-" + postId + @")(.*?)(?=</article>)",
+                RegexOptions.Singleline).Value;
 
-            var pokepasteList = new List<string> { };
-            foreach (Match match in Regex.Matches(sampleTeamsPost, @"(https:\/\/pokepast\.es\/)\w+", RegexOptions.IgnoreCase))
-            {
-                pokepasteList.Add(match.Value);
-            }
-            return pokepasteList;
+            var pastes = Regex
+                .Matches(post, @"(https:\/\/pokepast\.es\/)\w+", RegexOptions.IgnoreCase)
+                .Select(match => match.Value)
+                .ToList();
+
+            return pastes;
         }
 
-        public async Task<string> GenerateSamplesHtml(List<string> pokepastes)
+        private async Task<List<TeamPreview>> GenerateSampleTeams(List<string> pastes)
         {
-            var html = "";
-            foreach (var pokepaste in pokepastes)
-            {
-                try
-                {
-                    //grab pokepaste source
-                    var responseBody = await _httpClient.GetStringAsync(pokepaste);
+            var results = await Task.WhenAll(pastes.Select(GenerateSampleTeam));
+            return results.ToList();
+        }
 
-                    //grab author and title
-                    var authorName = Regex.Match(responseBody, @"(?<=<h2>&nbsp;by )(.*?)(?=</h2>)", RegexOptions.Singleline).Value;
-                    var teamName = HttpUtility.HtmlDecode(Regex.Match(responseBody, @"(?<=<h1>)(.*?)(?=</h1>)", RegexOptions.Singleline).Value);
+        private async Task<TeamPreview> GenerateSampleTeam(string paste)
+        {
+            var response = await _httpClient.GetStringAsync(paste.EndsWith("/json") ? paste : $"{paste}/json");
+            var json = JObject.Parse(response);
 
-                    //grab pokemon names
-                    foreach (Match match in Regex.Matches(responseBody, @"(?<=<pre><span class=)(.*?)(?=</span>)", RegexOptions.Singleline))
-                    {
-                        html += "<psicon pokemon=\"";
-                        //can probably make a better regex to avoid making the substring call heere
-                        html += match.Value.Substring(match.Value.IndexOf('>') + 1);
-                        html += "\"> ";
-                    }
-                    html += "</br><a href=\"" + pokepaste + "\">";
-                    html += teamName;
-                    html += "</a> by ";
-                    html += authorName;
-                    html += "</br>";
+            var author = json.GetValue("author")?.ToString() ?? string.Empty;
+            var title = json.GetValue("title")?.ToString() ?? string.Empty;
+            var data = json.GetValue("paste")?.ToString() ?? string.Empty;
+            var pokemon = GeneratePokemonList(data);
 
-                }
-                catch (HttpRequestException ex)
-                {
-                    //todo (lol)
-                }
-            }
-            return html;
+            return new TeamPreview(paste, 
+                !string.IsNullOrWhiteSpace(author) ? author : "an Unknown Author", 
+                !string.IsNullOrWhiteSpace(title) ? title : "Unnamed Team", 
+                pokemon);
+        }
+
+        private List<string> GeneratePokemonList(string data)
+        {
+            return data
+                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+                .Where(line => !string.IsNullOrWhiteSpace(line.Trim()))
+                .Where(FilterNonNames)
+                .Select(GetName)
+                .ToList();
+        }
+
+        private static bool FilterNonNames(string line) => !(line.Contains(':') || line.Contains('/') || line.Contains("Nature") || line.Contains("- "));
+        private static string GetName(string line)
+        {
+            var chunk = line.Split('@')[0].Replace("(M)", string.Empty).Replace("(F)", string.Empty);
+            return (chunk.Contains('(') && chunk.Contains(')')) ? chunk.Split('(', ')')[1] : chunk;
         }
     }
 }
