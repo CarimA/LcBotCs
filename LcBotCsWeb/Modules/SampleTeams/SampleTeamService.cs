@@ -75,29 +75,11 @@ namespace LcBotCsWeb.Modules.SampleTeams
             var author = json.GetValue("author")?.ToString() ?? string.Empty;
             var title = json.GetValue("title")?.ToString() ?? string.Empty;
             var data = json.GetValue("paste")?.ToString() ?? string.Empty;
-            var pokemon = GeneratePokemonList(data);
 
             return new TeamPreview(paste, 
                 !string.IsNullOrWhiteSpace(author) ? author : "an Unknown Author", 
                 !string.IsNullOrWhiteSpace(title) ? title : "Unnamed Team", 
-                pokemon);
-        }
-
-        private List<string> GeneratePokemonList(string data)
-        {
-            return data
-                .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-                .Where(line => !string.IsNullOrWhiteSpace(line.Trim()))
-                .Where(FilterNonNames)
-                .Select(GetName)
-                .ToList();
-        }
-
-        private static bool FilterNonNames(string line) => !(line.Contains(':') || line.Contains('/') || line.Contains("Nature") || line.Contains("- "));
-        private static string GetName(string line)
-        {
-            var chunk = line.Split('@')[0].Replace("(M)", string.Empty).Replace("(F)", string.Empty);
-            return (chunk.Contains('(') && chunk.Contains(')')) ? chunk.Split('(', ')')[1] : chunk;
+                data);
         }
     }
 }
