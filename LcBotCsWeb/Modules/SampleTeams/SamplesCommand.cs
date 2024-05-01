@@ -23,6 +23,13 @@ namespace LcBotCsWeb.Modules.SampleTeams
 
 		public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, Func<string, Task> send)
 		{
+			async Task Send(string toPrivate, string toPublic)
+			{
+				await send(room == null ? toPrivate : toPublic);
+			}
+
+			await Send($"/msgroom lc, /sendhtmlpage {user.Token}, expanded-samples, Loading...", $"/adduhtml expanded-samples, Loading...");
+
 			var results = new List<TeamPreview>();
 
 			try
@@ -46,9 +53,7 @@ namespace LcBotCsWeb.Modules.SampleTeams
 			}
 
 			var html = TeamHtmlFormatter.Generate(results);
-			await send(room == null
-				? $"/msgroom lc, /sendhtmlpage {user.Token}, expanded-samples,{html}"
-				: $"/adduhtml expanded-samples,{html}");
+			await Send($"/msgroom lc, /sendhtmlpage {user.Token}, expanded-samples,{html}", $"/adduhtml expanded-samples,{html}");
 		}
 	}
 }
