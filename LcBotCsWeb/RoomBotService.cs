@@ -1,7 +1,7 @@
 using PsimCsLib;
 using PsimCsLib.PubSub;
 
-namespace LcBotCsWeb.Services;
+namespace LcBotCsWeb;
 
 public class RoomBotService : BackgroundService
 {

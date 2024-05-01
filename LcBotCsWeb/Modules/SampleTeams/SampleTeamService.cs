@@ -77,9 +77,9 @@ namespace LcBotCsWeb.Modules.SampleTeams
             var title = json.GetValue("title")?.ToString() ?? string.Empty;
             var data = json.GetValue("paste")?.ToString() ?? string.Empty;
 
-            return new TeamPreview(paste, 
-                !string.IsNullOrWhiteSpace(author) ? author : "an Unknown Author", 
-                !string.IsNullOrWhiteSpace(title) ? title : "Unnamed Team", 
+            return new TeamPreview(paste,
+                !string.IsNullOrWhiteSpace(author) ? author : "an Unknown Author",
+                !string.IsNullOrWhiteSpace(title) ? title : "Unnamed Team",
                 data);
         }
     }

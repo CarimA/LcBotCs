@@ -1,4 +1,4 @@
-﻿using LcBotCsWeb.Services.Commands;
+﻿using LcBotCsWeb.Modules.Commands;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
 
