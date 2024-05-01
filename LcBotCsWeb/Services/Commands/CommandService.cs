@@ -24,12 +24,12 @@ public class CommandService : ISubscriber<PrivateMessage>, ISubscriber<ChatMessa
 			_commandService = commandService;
 		}
 
-		public async IAsyncEnumerable<string> Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments)
+		public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, Func<string, Task> send)
 		{
 			foreach (var arg in arguments)
 			{
 				if (_commandService.TryParseCommand(arg, out var command, out var _))
-					yield return command.HelpText;
+					await send(command.HelpText);
 			}
 		}
 	}
@@ -87,9 +87,7 @@ public class CommandService : ISubscriber<PrivateMessage>, ISubscriber<ChatMessa
 
 		try
 		{
-			var responses = await command.Execute(timePosted, user, room, parameters).ToListAsync();
-			foreach (var response in responses)
-				await SendMessage(response);
+			await command.Execute(timePosted, user, room, parameters, SendMessage);
 		}
 		catch (Exception ex)
 		{
