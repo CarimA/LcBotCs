@@ -25,6 +25,8 @@ namespace LcBotCsWeb.Modules.SampleTeams
 					{ "gen7lc", "https://www.smogon.com/forums/threads/sm-lc.3698490/post-9139651" },
 					{ "gen8lc", "https://www.smogon.com/forums/threads/ss-lc.3724530/post-9702239" },
 					{ "gen9lc", "https://www.smogon.com/forums/threads/sv-lc-sample-teams.3712989/post-9439821" },
+					{ "gen9doubleslc", "https://www.smogon.com/forums/threads/sv-doubles-little-cup.3710957/post-9401052" },
+					{ "gen9lcuu", "https://www.smogon.com/forums/threads/sv-lc-uu-metagame-resource-and-discussion-thread.3711750/post-9418851" }
 				};
 		}
 
