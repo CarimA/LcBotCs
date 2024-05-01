@@ -1,10 +1,10 @@
 ﻿using LcBotCsWeb.Data.Interfaces;
+using LcBotCsWeb.Data.Repositories;
+using MongoDB.Bson.Serialization;
 using PsimCsLib;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
 using System.Diagnostics;
-using LcBotCsWeb.Data.Repositories;
-using MongoDB.Bson.Serialization;
 
 namespace LcBotCsWeb.Modules;
 
@@ -49,6 +49,7 @@ public class DebugModule : ISubscriber<LoginSuccess>, ISubscriber<NotImplemented
         await _client.SetAvatar("supernerd");
 
         await _client.Rooms.Join("botdevelopment");
+        await _client.Rooms.Join("littlecup");
     }
 
     public async Task HandleEvent(SocketConnected e)

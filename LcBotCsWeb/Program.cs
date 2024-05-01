@@ -4,7 +4,9 @@ using LcBotCsWeb.Data.Models;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Data.Services;
 using LcBotCsWeb.Modules;
+using LcBotCsWeb.Modules.SampleTeams;
 using LcBotCsWeb.Services;
+using LcBotCsWeb.Services.Commands;
 using Microsoft.Extensions.FileProviders;
 using PsimCsLib;
 using PsimCsLib.PubSub;
@@ -42,7 +44,16 @@ else
     builder.Services.AddSingleton<ICache, DatabaseCache>();
 
 // Register bot modules
+builder.Services.AddSingleton<ISubscriber, CommandService>();
+builder.Services.AddSingleton(new CommandOptions()
+{
+	CommandString = GetEnvVar("COMMAND_PREFIX", nameof(CommandOptions))
+});
+
 builder.Services.AddSingleton<ISubscriber, DebugModule>();
+
+builder.Services.AddSingleton<SampleTeamService>();
+builder.Services.AddSingleton<ICommand, SamplesCommand>();
 
 var app = builder.Build();
 
