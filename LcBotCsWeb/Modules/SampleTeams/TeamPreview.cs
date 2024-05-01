@@ -1,4 +1,6 @@
-﻿public class TeamPreview
+﻿using System.Text.RegularExpressions;
+
+public class TeamPreview
 {
     public string Link { get; set; }
     public string Author { get; set; }
@@ -10,7 +12,7 @@
         Link = link;
         Author = author;
         Title = title;
-        Pokemon = GeneratePokemonList(rawPaste);
+        Pokemon = GeneratePokemonList(rawPaste).ToList();
     }
 
     public TeamPreview(string link, string author, string title, List<string> pokemon)
@@ -21,21 +23,34 @@
         Pokemon = pokemon;
     }
 
-    private static List<string> GeneratePokemonList(string data)
+    private static IEnumerable<string> GeneratePokemonList(string data)
     {
-        return data
-            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
-            .Select(line => line.Trim())
-            .Where(line => !string.IsNullOrWhiteSpace(line))
-            .Where(FilterNonNames)
-            .Select(GetName)
-            .ToList();
-    }
+        var split = data
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.None)
+            .Select(line => line.Trim());
+        var seekName = true;
 
-    private static bool FilterNonNames(string line) => !(line.Contains(':') || line.Contains('/') || line.EndsWith("Nature") || line.StartsWith("- "));
-    private static string GetName(string line)
-    {
-        var chunk = line.Split('@')[0].Replace("(M)", string.Empty).Replace("(F)", string.Empty);
-        return (chunk.Contains('(') && chunk.Contains(')')) ? chunk.Split('(', ')')[1] : chunk;
+        foreach (var line in split)
+        {
+            if (string.IsNullOrWhiteSpace(line))
+                seekName = true;
+
+            if (!seekName)
+                continue;
+
+            var nicknameMatch = Regex.Match(line, @"^([^()=@]*)\s+\(([^()=@]{2,})\)");
+            var nameMatch = Regex.Match(line, @"^([^()=@]{2,})");
+
+            if (nicknameMatch.Success)
+            {
+                yield return nicknameMatch.Groups[2].Value.Trim();
+                seekName = false;
+            }
+            else if (nameMatch.Success)
+            {
+                yield return nameMatch.Groups[1].Value.Trim();
+                seekName = false;
+            }
+        }
     }
 }
