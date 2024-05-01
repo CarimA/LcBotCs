@@ -1,90 +1,63 @@
-﻿using System.Diagnostics;
+﻿using LcBotCsWeb.Services.Commands;
+using PsimCsLib.Entities;
 using PsimCsLib.Enums;
-using PsimCsLib.Models;
-using PsimCsLib.PubSub;
 
 namespace LcBotCsWeb.Modules.SampleTeams
 {
-    public class SamplesCommand : ISubscriber<PrivateMessage>, ISubscriber<ChatMessage>
-    {
-        private readonly SampleTeamService _sampleTeamService;
+    public class SamplesCommand : ICommand
+	{
+		public List<string> Aliases => new List<string>() { "samples" };
+		public string HelpText => String.Empty;
+		public Rank RequiredPublicRank => Rank.Voice;
+		public bool AllowPublic => true;
+		public Rank RequiredPrivateRank => Rank.Normal;
+		public bool AllowPrivate => true;
+		public bool AcceptIntro => false;
+
+		private readonly SampleTeamService _sampleTeamService;
 
         public SamplesCommand(SampleTeamService sampleTeamService)
         {
             _sampleTeamService = sampleTeamService;
         }
 
-        public async Task HandleEvent(PrivateMessage e)
-        {
-            if (e.Message.StartsWith("-samples"))
-            {
-                Debug.WriteLine($"message from: {e.Sender.Name.DisplayName}");
+        public async IAsyncEnumerable<string> Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments)
+		{
+			var results = new List<TeamPreview>();
+			var httpError = false;
 
-                var format = e.Message.Split(' ')[1].ToLowerInvariant().Trim();
+			try
+	        {
+		        foreach (var arg in arguments)
+		        {
+			        var teams = await _sampleTeamService.GetFormat(arg.ToLowerInvariant().Trim());
+					if (teams != null)
+						results.AddRange(teams);
+		        }
+	        }
+	        catch (HttpRequestException _)
+	        {
+		        httpError = true;
+	        }
 
-                try
-                {
-                    var results = await _sampleTeamService.GetFormat(format);
-                    if (results == null)
-                    {
-                        await e.Sender.Send($"{format} not found.");
-                        return;
-                    }
+			if (httpError)
+			{
+				yield return "There was an error handling your request. Try again later.";
+				yield break;
+			}
 
-                    var html = TeamHtmlFormatter.Generate(results);
-                    await e.Sender.Send($"/msgroom lc, /sendhtmlpage {e.Sender.Name.DisplayName}, expanded-samples,{html}");
-                }
-                catch (HttpRequestException _)
-                {
-                    await e.Sender.Send("There was an error handling your request. Try again later.");
-                }
-            }
-        }
+			if (!results.Any())
+			{
+				yield return "No sample teams could be found.";
+				yield break;
+			}
 
-        public async Task HandleEvent(ChatMessage e)
-        {
-            if (e.IsIntro)
-                return;
+			var html = TeamHtmlFormatter.Generate(results);
 
-            async Task SendMessage(string message)
-            {
-                if (e.User.Rank[e.Room] == Rank.Normal)
-                    await e.User.Send(message);
-                else
-                    await e.Room.Send(message);
-            }
-
-            async Task SendHtml(string html)
-            {
-                if (e.User.Rank[e.Room] == Rank.Normal)
-                    await e.User.Send($"/msgroom lc, /sendhtmlpage {e.User.Name.DisplayName}, expanded-samples,{html}");
-                else
-                    await e.Room.Send($"/adduhtml expanded-samples,{html}");
-            }
-
-            if (e.Message.StartsWith("~samples"))
-            {
-                Debug.WriteLine($"message from: {e.User.Name.DisplayName}");
-
-                var format = e.Message.Split(' ')[1].ToLowerInvariant().Trim();
-
-                try
-                {
-                    var results = await _sampleTeamService.GetFormat(format);
-                    if (results == null)
-                    {
-                        await SendMessage($"{format} not found.");
-                        return;
-                    }
-
-                    var html = TeamHtmlFormatter.Generate(results);
-                    await SendHtml(html);
-                }
-                catch (HttpRequestException _)
-                {
-                    await SendMessage("There was an error handling your request. Try again later.");
-                }
-            }
-        }
-    }
+			if (room == null)
+				yield return $"/msgroom lc, /sendhtmlpage {user.Token}, expanded-samples,{html}";
+			else
+				yield return $"/adduhtml expanded-samples,{html}";
+		}
+	}
 }
