@@ -2,5 +2,5 @@
 
 public class DatabaseObjectWrapper<T> : DatabaseObject
 {
-    public T Data { get; set; }
+	public T Data { get; set; }
 }

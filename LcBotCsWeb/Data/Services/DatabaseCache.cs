@@ -6,59 +6,59 @@ namespace LcBotCsWeb.Data.Services;
 
 public class DatabaseCache : ICache
 {
-    private readonly Repository<DatabaseObjectWrapper<CachedItem>> _collection;
+	private readonly Repository<DatabaseObjectWrapper<CachedItem>> _collection;
 
-    public DatabaseCache(Database database)
-    {
-        _collection = database.Cache;
-    }
+	public DatabaseCache(Database database)
+	{
+		_collection = database.Cache;
+	}
 
-    public async Task<bool> Set(string key, object obj, TimeSpan timeToLive)
-    {
-        await _collection.Upsert(new DatabaseObjectWrapper<CachedItem>() { Data = new CachedItem(key, obj, DateTime.UtcNow + timeToLive) });
-        return true;
-    }
+	public async Task<bool> Set(string key, object obj, TimeSpan timeToLive)
+	{
+		await _collection.Upsert(new DatabaseObjectWrapper<CachedItem>() { Data = new CachedItem(key, obj, DateTime.UtcNow + timeToLive) });
+		return true;
+	}
 
-    public async Task<bool> Delete(string key)
-    {
-        var num = await _collection.Delete(item => item.Data.Key == key);
-        return num > 0;
-    }
+	public async Task<bool> Delete(string key)
+	{
+		var num = await _collection.Delete(item => item.Data.Key == key);
+		return num > 0;
+	}
 
-    public async Task<T?> Get<T>(string key) where T : class
-    {
-        var result = (await _collection.Find(item => item.Data.Key == key)).FirstOrDefault();
+	public async Task<T?> Get<T>(string key) where T : class
+	{
+		var result = (await _collection.Find(item => item.Data.Key == key)).FirstOrDefault();
 
-        if (result == null)
-            return null;
+		if (result == null)
+			return null;
 
-        if (result.Data.Expires > DateTime.UtcNow)
-            if (result.Data.Object is T t)
-                return t;
+		if (result.Data.Expires > DateTime.UtcNow)
+			if (result.Data.Object is T t)
+				return t;
 
-        await Delete(result.Data.Key);
-        return null;
-    }
+		await Delete(result.Data.Key);
+		return null;
+	}
 
-    public async Task<T> Get<T>(string key, Func<Task<T>> create, TimeSpan timeToLive) where T : class
-    {
-        var result = await Get<T>(key);
+	public async Task<T> Get<T>(string key, Func<Task<T>> create, TimeSpan timeToLive) where T : class
+	{
+		var result = await Get<T>(key);
 
-        if (result != null)
-            return result;
+		if (result != null)
+			return result;
 
-        var obj = await create();
-        await Set(key, obj, timeToLive);
-        return obj;
-    }
+		var obj = await create();
+		await Set(key, obj, timeToLive);
+		return obj;
+	}
 
-    public async Task Clear()
-    {
-        await _collection.Delete(_ => true);
-    }
+	public async Task Clear()
+	{
+		await _collection.Delete(_ => true);
+	}
 
-    public async Task Cleanup()
-    {
-        await _collection.Delete(item => item.Data.Expires < DateTime.UtcNow);
-    }
+	public async Task Cleanup()
+	{
+		await _collection.Delete(item => item.Data.Expires < DateTime.UtcNow);
+	}
 }

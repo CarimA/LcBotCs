@@ -2,5 +2,5 @@
 
 public class CommandOptions
 {
-    public string CommandString { get; set; }
+	public string CommandString { get; set; }
 }

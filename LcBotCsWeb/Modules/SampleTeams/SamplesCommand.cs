@@ -4,7 +4,7 @@ using PsimCsLib.Enums;
 
 namespace LcBotCsWeb.Modules.SampleTeams
 {
-    public class SamplesCommand : ICommand
+	public class SamplesCommand : ICommand
 	{
 		public List<string> Aliases => new List<string>() { "samples" };
 		public string HelpText => String.Empty;
@@ -16,28 +16,28 @@ namespace LcBotCsWeb.Modules.SampleTeams
 
 		private readonly SampleTeamService _sampleTeamService;
 
-        public SamplesCommand(SampleTeamService sampleTeamService)
-        {
-            _sampleTeamService = sampleTeamService;
-        }
+		public SamplesCommand(SampleTeamService sampleTeamService)
+		{
+			_sampleTeamService = sampleTeamService;
+		}
 
-        public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, Func<string, Task> send)
+		public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, Func<string, Task> send)
 		{
 			var results = new List<TeamPreview>();
 
 			try
-	        {
-		        foreach (var arg in arguments)
-		        {
-			        var teams = await _sampleTeamService.GetFormat(arg.ToLowerInvariant().Trim());
+			{
+				foreach (var arg in arguments)
+				{
+					var teams = await _sampleTeamService.GetFormat(arg.ToLowerInvariant().Trim());
 					if (teams != null)
 						results.AddRange(teams);
-		        }
-	        }
-	        catch (HttpRequestException _)
-	        {
-		        await send("There was an error handling your request. Try again later.");
-	        }
+				}
+			}
+			catch (HttpRequestException _)
+			{
+				await send("There was an error handling your request. Try again later.");
+			}
 
 			if (!results.Any())
 			{
