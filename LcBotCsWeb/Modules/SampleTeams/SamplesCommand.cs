@@ -23,11 +23,18 @@ namespace LcBotCsWeb.Modules.SampleTeams
 
 		public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, Func<string, Task> send)
 		{
+			var isPrivate = room == null;
 			async Task SendHtmlPage(string name, string html)
 			{
-				await send(room == null 
+				await send(isPrivate
 					? $"/msgroom lc, /sendhtmlpage {user.Token}, {name}, {html}"
 					: $"/adduhtml {name}, {html}");
+			}
+
+			if (!arguments.Any())
+			{
+				await send("Please specify a format.");
+				return;
 			}
 
 			await SendHtmlPage("expanded-samples", "Loading...");
@@ -52,6 +59,11 @@ namespace LcBotCsWeb.Modules.SampleTeams
 			{
 				await SendHtmlPage("expanded-samples", "No sample teams could be found.");
 				return;
+			}
+
+			if (!isPrivate)
+			{
+				results = results.Shuffle().Take(6).ToList();
 			}
 
 			var html = TeamHtmlFormatter.Generate(results);
