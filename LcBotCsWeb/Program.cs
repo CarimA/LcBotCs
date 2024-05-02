@@ -7,6 +7,7 @@ using LcBotCsWeb.Data.Services;
 using LcBotCsWeb.Modules.Commands;
 using LcBotCsWeb.Modules.SampleTeams;
 using LcBotCsWeb.Modules.Startup;
+using LcBotCsWeb.Modules.ViabilityRankings;
 using Microsoft.Extensions.FileProviders;
 using PsimCsLib;
 using PsimCsLib.PubSub;
@@ -55,6 +56,9 @@ builder.Services.AddSingleton(new StartupOptions(GetEnvVar("PSIM_AVATAR", nameof
 
 builder.Services.AddSingleton<SampleTeamService>();
 builder.Services.AddSingleton<ICommand, SamplesCommand>();
+
+builder.Services.AddSingleton<ICommand, ViabilityRankingsService>();
+// builder.Services.AddSingleton<ICommand, ShowPostCommand>();
 
 var app = builder.Build();
 

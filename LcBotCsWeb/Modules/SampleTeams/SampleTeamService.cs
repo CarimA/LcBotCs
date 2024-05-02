@@ -50,11 +50,7 @@ namespace LcBotCsWeb.Modules.SampleTeams
 
 		private async Task<List<string>> ScrapePokepastes(string smogonThread)
 		{
-			var postId = Regex.Match(smogonThread, @"(?<=post-)(.*)").Value;
-			var response = await _httpClient.GetStringAsync(smogonThread);
-			var post = Regex.Match(response, @"(?<=js-post-" + postId + @")(.*?)(?=</article>)",
-				RegexOptions.Singleline).Value;
-
+			var post = await _httpClient.GetSmogonThread(smogonThread);
 			var pastes = Regex
 				.Matches(post, @"(https:\/\/pokepast\.es\/)\w+", RegexOptions.IgnoreCase)
 				.Select(match => match.Value)
