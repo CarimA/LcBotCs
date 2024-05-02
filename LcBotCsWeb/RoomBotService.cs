@@ -20,7 +20,7 @@ public class RoomBotService : BackgroundService
 		foreach (var module in modules)
 			_psimClient.Subscribe(module);
 
-		await _psimClient.Connect(true);
+		await _psimClient.Connect();
 	}
 
 	public override async Task StopAsync(CancellationToken cancellationToken)
