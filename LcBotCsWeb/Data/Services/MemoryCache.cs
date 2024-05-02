@@ -12,7 +12,7 @@ public class MemoryCache : ICache
 		_cache = new Dictionary<string, CachedItem>();
 	}
 
-	public Task<bool> Set(string key, object obj, TimeSpan timeToLive)
+	public Task<bool> Create(string key, object obj, TimeSpan timeToLive)
 		=> Task.FromResult(_cache.TryAdd(key, new CachedItem(key, obj, DateTime.UtcNow + timeToLive)));
 
 	public Task<bool> Delete(string key)
@@ -36,7 +36,7 @@ public class MemoryCache : ICache
 		return null;
 	}
 
-	public async Task<T> Get<T>(string key, Func<Task<T>> create, TimeSpan timeToLive) where T : class
+	public async Task<T> GetOrCreate<T>(string key, Func<Task<T>> create, TimeSpan timeToLive) where T : class
 	{
 		var result = await Get<T>(key);
 
@@ -44,7 +44,7 @@ public class MemoryCache : ICache
 			return result;
 
 		var obj = await create();
-		await Set(key, obj, timeToLive);
+		await Create(key, obj, timeToLive);
 		return obj;
 	}
 

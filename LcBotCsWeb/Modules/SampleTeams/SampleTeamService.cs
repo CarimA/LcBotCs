@@ -37,7 +37,7 @@ namespace LcBotCsWeb.Modules.SampleTeams
 			if (!_formatSamples.ContainsKey(format))
 				return null;
 
-			var results = await _cache.Get($"samples-{format}", () => GenerateFormat(format), TimeSpan.FromDays(1));
+			var results = await _cache.GetOrCreate($"samples-{format}", () => GenerateFormat(format), TimeSpan.FromDays(1));
 			return results;
 		}
 

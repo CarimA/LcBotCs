@@ -13,7 +13,7 @@ public class DatabaseCache : ICache
 		_collection = database.Cache;
 	}
 
-	public async Task<bool> Set(string key, object obj, TimeSpan timeToLive)
+	public async Task<bool> Create(string key, object obj, TimeSpan timeToLive)
 	{
 		await _collection.Upsert(new DatabaseObjectWrapper<CachedItem>() { Data = new CachedItem(key, obj, DateTime.UtcNow + timeToLive) });
 		return true;
@@ -40,7 +40,7 @@ public class DatabaseCache : ICache
 		return null;
 	}
 
-	public async Task<T> Get<T>(string key, Func<Task<T>> create, TimeSpan timeToLive) where T : class
+	public async Task<T> GetOrCreate<T>(string key, Func<Task<T>> create, TimeSpan timeToLive) where T : class
 	{
 		var result = await Get<T>(key);
 
@@ -48,7 +48,7 @@ public class DatabaseCache : ICache
 			return result;
 
 		var obj = await create();
-		await Set(key, obj, timeToLive);
+		await Create(key, obj, timeToLive);
 		return obj;
 	}
 
