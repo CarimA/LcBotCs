@@ -23,12 +23,14 @@ namespace LcBotCsWeb.Modules.SampleTeams
 
 		public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, Func<string, Task> send)
 		{
-			async Task Send(string toPrivate, string toPublic)
+			async Task SendHtmlPage(string name, string html)
 			{
-				await send(room == null ? toPrivate : toPublic);
+				await send(room == null 
+					? $"/msgroom lc, /sendhtmlpage {user.Token}, {name}, {html}"
+					: $"/adduhtml {name}, {html}");
 			}
 
-			await Send($"/msgroom lc, /sendhtmlpage {user.Token}, expanded-samples, Loading...", $"/adduhtml expanded-samples, Loading...");
+			await SendHtmlPage("expanded-samples", "Loading...");
 
 			var results = new List<TeamPreview>();
 
@@ -43,17 +45,17 @@ namespace LcBotCsWeb.Modules.SampleTeams
 			}
 			catch (HttpRequestException _)
 			{
-				await send("There was an error handling your request. Try again later.");
+				await SendHtmlPage("expanded-samples", "There was an error handling your request. Try again later.");
 			}
 
 			if (!results.Any())
 			{
-				await send("No sample teams could be found.");
+				await SendHtmlPage("expanded-samples", "No sample teams could be found.");
 				return;
 			}
 
 			var html = TeamHtmlFormatter.Generate(results);
-			await Send($"/msgroom lc, /sendhtmlpage {user.Token}, expanded-samples,{html}", $"/adduhtml expanded-samples,{html}");
+			await SendHtmlPage("expanded-samples", html);
 		}
 	}
 }
