@@ -7,7 +7,7 @@ namespace LcBotCsWeb.Modules.SampleTeams
 	public class SamplesCommand : ICommand
 	{
 		public List<string> Aliases => new List<string>() { "samples" };
-		public string HelpText => String.Empty;
+		public string HelpText => string.Empty;
 		public Rank RequiredPublicRank => Rank.Voice;
 		public bool AllowPublic => true;
 		public Rank RequiredPrivateRank => Rank.Normal;

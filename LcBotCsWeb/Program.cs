@@ -4,9 +4,9 @@ using LcBotCsWeb.Data.Interfaces;
 using LcBotCsWeb.Data.Models;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Data.Services;
-using LcBotCsWeb.Modules;
 using LcBotCsWeb.Modules.Commands;
 using LcBotCsWeb.Modules.SampleTeams;
+using LcBotCsWeb.Modules.Startup;
 using Microsoft.Extensions.FileProviders;
 using PsimCsLib;
 using PsimCsLib.PubSub;
@@ -50,7 +50,8 @@ builder.Services.AddSingleton(new CommandOptions()
 	CommandString = GetEnvVar("COMMAND_PREFIX", nameof(CommandOptions))
 });
 
-builder.Services.AddSingleton<ISubscriber, DebugModule>();
+builder.Services.AddSingleton<ISubscriber, StartupModule>();
+builder.Services.AddSingleton(new StartupOptions(GetEnvVar("PSIM_AVATAR", nameof(StartupOptions)), GetEnvVar("PSIM_ROOMS", nameof(StartupOptions))));
 
 builder.Services.AddSingleton<SampleTeamService>();
 builder.Services.AddSingleton<ICommand, SamplesCommand>();
