@@ -45,12 +45,13 @@ public class ViabilityRankingsCommand : ICommand
 			await respond.SendHtml(CommandTarget.Context, "viability-rankings", "There was an error handling your request. Try again later.");
 		}
 
-		if (!results.Any())
+		var html = results.GenerateHtml();
+		if (string.IsNullOrWhiteSpace(html))
 		{
 			await respond.SendHtml(CommandTarget.Context, "viability-rankings", $"Viability rankings for {format} could not be found.");
 			return;
 		}
 
-		await respond.SendHtml(CommandTarget.Context, $"viability-rankings", results.GenerateHtml());
+		await respond.SendHtml(CommandTarget.Context, $"viability-rankings", html);
 	}
 }
