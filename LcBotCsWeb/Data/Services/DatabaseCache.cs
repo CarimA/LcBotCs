@@ -15,6 +15,9 @@ public class DatabaseCache : ICache
 
 	public async Task<bool> Create(string key, object obj, TimeSpan timeToLive)
 	{
+		if (obj == null)
+			return false;
+
 		await _collection.Upsert(new DatabaseObjectWrapper<CachedItem>() { Data = new CachedItem(key, obj, DateTime.UtcNow + timeToLive) });
 		return true;
 	}

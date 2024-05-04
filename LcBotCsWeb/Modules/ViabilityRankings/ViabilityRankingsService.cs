@@ -1,25 +1,17 @@
 ﻿using System.Text.RegularExpressions;
-using LcBotCsWeb.Modules.Commands;
-using PsimCsLib.Entities;
-using PsimCsLib.Enums;
+using LcBotCsWeb.Data.Interfaces;
 
 namespace LcBotCsWeb.Modules.ViabilityRankings;
 
-public class ViabilityRankingsService : ICommand
+public class ViabilityRankingsService
 {
-	public List<string> Aliases => new List<string>() { "vr" };
-	public string HelpText => string.Empty;
-	public Rank RequiredPublicRank => Rank.Voice;
-	public bool AllowPublic => true;
-	public Rank RequiredPrivateRank => Rank.Normal;
-	public bool AllowPrivate => true;
-	public bool AcceptIntro => false;
-
-	private readonly Dictionary<string, string> _threads;
+	private readonly ICache _cache;
 	private readonly HttpClient _httpClient;
+	private readonly Dictionary<string, string> _threads;
 
-	public ViabilityRankingsService()
+	public ViabilityRankingsService(ICache cache)
 	{
+		_cache = cache;
 		_httpClient = new HttpClient();
 
 		_threads =
@@ -30,37 +22,35 @@ public class ViabilityRankingsService : ICommand
 			};
 	}
 
-	public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, CommandResponse respond)
+	public async Task<List<Rankings>?> GetFormat(string format)
 	{
-		var format = arguments.FirstOrDefault().ToLowerInvariant();
+		format = format.ToLowerInvariant().Trim();
 
-		if (string.IsNullOrWhiteSpace(format))
-			return;
+		if (!_threads.ContainsKey(format))
+			return null;
 
-		if (!_threads.TryGetValue(format, out var url))
-			return;
+		var results = await _cache.GetOrCreate($"vrs-{format}", () => GenerateFormat(format), TimeSpan.FromDays(3));
+		return results;
+	}
 
-		var html = await _httpClient.GetSmogonThread(url);
+	private async Task<List<Rankings>?> GenerateFormat(string format)
+	{
+		var html = await _httpClient.GetSmogonThread(_threads[format]);
 
 		if (string.IsNullOrWhiteSpace(html))
-			return;
+			return null;
 
+		var results = new List<Rankings>();
 		var regex = new Regex("\">(?:<b>)?(.[-+]{0,1})(?: Rank)?(?:</b>)?</span>([\\s\\S]*?)(?:<br />\\s(<s|<b))", RegexOptions.Multiline | RegexOptions.Compiled);
 		var matches = regex.Matches(html);
-		var divs = new List<string>();
 		foreach (Match match in matches)
 		{
 			var rank = match.Groups[1].Value;
 			var pokemonRegex = Regex.Matches(match.Groups[2].Value, "(?:\':)(.+)(?::\')");
-			var pokemon = pokemonRegex
-				.Select(p => p.Groups[1].Value.ToLowerInvariant()).Select(pokemon => $"<psicon pokemon='{pokemon}'>");
-			var icons = string.Join(string.Empty, pokemon);
-			divs.Add($"<div style='display: flex; padding: 8px; box-sizing: border-box;'><div><div style='font-size:100%; text-decoration: none; font-weight: bold; text-align: center; margin-top: 4px;'>{rank}</div><div style='font-size: 80%; text-decoration: none; text-align: center;'>RANK</div></div><div style='margin-left: 8px;'>{icons}</div></div>");
+			var pokemon = pokemonRegex.Select(p => p.Groups[1].Value.ToLowerInvariant());
+			results.Add(new Rankings(rank, pokemon.ToList()));
 		}
 
-		if (!divs.Any())
-			return;
-
-		await respond.SendHtml(CommandTarget.Context, $"viability-{format}", $"{string.Join(string.Empty, divs)}");
+		return results;
 	}
 }

@@ -3,7 +3,6 @@ using PsimCsLib.Enums;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
 using System.Text.RegularExpressions;
-using System.Xml.Linq;
 
 namespace LcBotCsWeb.Modules.Commands;
 

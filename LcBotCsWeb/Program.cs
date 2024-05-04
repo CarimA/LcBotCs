@@ -57,8 +57,8 @@ builder.Services.AddSingleton(new StartupOptions(GetEnvVar("PSIM_AVATAR", nameof
 builder.Services.AddSingleton<SampleTeamService>();
 builder.Services.AddSingleton<ICommand, SamplesCommand>();
 
-builder.Services.AddSingleton<ICommand, ViabilityRankingsService>();
-// builder.Services.AddSingleton<ICommand, ShowPostCommand>();
+builder.Services.AddSingleton<ViabilityRankingsService>();
+builder.Services.AddSingleton<ICommand, ViabilityRankingsCommand>();
 
 var app = builder.Build();
 
