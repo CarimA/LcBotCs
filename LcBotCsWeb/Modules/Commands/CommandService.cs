@@ -3,6 +3,7 @@ using PsimCsLib.Enums;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
 using System.Text.RegularExpressions;
+using System.Xml.Linq;
 
 namespace LcBotCsWeb.Modules.Commands;
 
@@ -24,12 +25,12 @@ public class CommandService : ISubscriber<PrivateMessage>, ISubscriber<ChatMessa
 			_commandService = commandService;
 		}
 
-		public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, Func<string, Task> send)
+		public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, CommandResponse respond)
 		{
 			foreach (var arg in arguments)
 			{
 				if (_commandService.TryParseCommand(arg, out var command, out var _))
-					await send(command.HelpText);
+					await respond.Send(CommandTarget.Context, command.HelpText);
 			}
 		}
 	}
@@ -77,21 +78,15 @@ public class CommandService : ISubscriber<PrivateMessage>, ISubscriber<ChatMessa
 				return;
 		}
 
-		async Task SendMessage(string message)
-		{
-			if (isPrivate)
-				await user.Send(message);
-			else
-				await room?.Send(message);
-		}
+		var response = new CommandResponse(user, room, isPrivate);
 
 		try
 		{
-			await command.Execute(timePosted, user, room, parameters, SendMessage);
+			await command.Execute(timePosted, user, room, parameters, response);
 		}
 		catch (Exception ex)
 		{
-			await SendMessage("An error occurred processing your command.");
+			await response.Send(CommandTarget.Context, "An error occurred processing your command.");
 			throw;
 		}
 	}

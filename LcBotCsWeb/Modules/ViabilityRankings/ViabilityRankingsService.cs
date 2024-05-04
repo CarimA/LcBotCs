@@ -30,16 +30,8 @@ public class ViabilityRankingsService : ICommand
 			};
 	}
 
-	public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, Func<string, Task> send)
+	public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, CommandResponse respond)
 	{
-		var isPrivate = room == null;
-		async Task SendHtmlPage(string name, string html)
-		{
-			await send(isPrivate
-				? $"/msgroom lc, /sendhtmlpage {user.Token}, {name}, {html}"
-				: $"/adduhtml {name}, {html}");
-		}
-
 		var format = arguments.FirstOrDefault().ToLowerInvariant();
 
 		if (string.IsNullOrWhiteSpace(format))
@@ -69,6 +61,6 @@ public class ViabilityRankingsService : ICommand
 		if (!divs.Any())
 			return;
 
-		await SendHtmlPage($"viability-{format}", $"{string.Join(string.Empty, divs)}");
+		await respond.SendHtml(CommandTarget.Context, $"viability-{format}", $"{string.Join(string.Empty, divs)}");
 	}
 }

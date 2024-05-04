@@ -13,5 +13,5 @@ public interface ICommand
 	public bool AllowPrivate { get; }
 	public bool AcceptIntro { get; }
 
-	Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, Func<string, Task> send);
+	Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, CommandResponse respond);
 }
