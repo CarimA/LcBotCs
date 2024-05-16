@@ -7,10 +7,13 @@ namespace LcBotCsWeb;
 public class RoomBotService : BackgroundService
 {
 	private readonly PsimClient _psimClient;
+	private readonly IHostApplicationLifetime _lifeTime;
 
-	public RoomBotService(IServiceScopeFactory scopeFactory, PsimClient psimClient) : base(scopeFactory)
+	public RoomBotService(IServiceScopeFactory scopeFactory, PsimClient psimClient,
+		IHostApplicationLifetime lifeTime) : base(scopeFactory)
 	{
 		_psimClient = psimClient;
+		_lifeTime = lifeTime;
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -25,7 +28,7 @@ public class RoomBotService : BackgroundService
 		{
 			try
 			{
-				await _psimClient.Connect();
+				await _psimClient.Connect(false);
 			}
 			catch (Exception ex)
 			{
@@ -33,12 +36,13 @@ public class RoomBotService : BackgroundService
 				throw;
 			}
 
-			await Task.Delay(500);
+			await Task.Delay(2000);
 		}
 	}
 
 	public override async Task StopAsync(CancellationToken cancellationToken)
 	{
 		_psimClient.Disconnect("Cancellation requested");
+		_lifeTime.StopApplication();
 	}
 }
