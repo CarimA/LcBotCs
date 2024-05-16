@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using PsimCsLib;
 using PsimCsLib.PubSub;
 
@@ -6,13 +7,10 @@ namespace LcBotCsWeb;
 public class RoomBotService : BackgroundService
 {
 	private readonly PsimClient _psimClient;
-	private readonly IHostApplicationLifetime _lifetime;
 
-	public RoomBotService(IServiceScopeFactory scopeFactory, PsimClient psimClient,
-		IHostApplicationLifetime lifetime) : base(scopeFactory)
+	public RoomBotService(IServiceScopeFactory scopeFactory, PsimClient psimClient) : base(scopeFactory)
 	{
 		_psimClient = psimClient;
-		_lifetime = lifetime;
 	}
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -23,8 +21,20 @@ public class RoomBotService : BackgroundService
 		foreach (var module in modules)
 			_psimClient.Subscribe(module);
 
-		await _psimClient.Connect();
-		_lifetime.StopApplication();
+		while (true)
+		{
+			try
+			{
+				await _psimClient.Connect();
+			}
+			catch (Exception ex)
+			{
+				Debug.WriteLine(ex);
+				throw;
+			}
+
+			await Task.Delay(500);
+		}
 	}
 
 	public override async Task StopAsync(CancellationToken cancellationToken)
