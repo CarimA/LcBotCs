@@ -12,7 +12,7 @@ using Microsoft.Extensions.FileProviders;
 using PsimCsLib;
 using PsimCsLib.PubSub;
 
-DotNetEnv.Env.Load();
+Env.Load();
 
 string GetEnvVar(string key, string container)
 {

@@ -32,7 +32,7 @@ public class RoomBotService : BackgroundService
 			}
 			catch (Exception ex)
 			{
-				Debug.WriteLine(ex);
+				Trace.WriteLine(ex);
 				throw;
 			}
 
