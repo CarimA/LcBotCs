@@ -42,7 +42,7 @@ builder.Services.AddSingleton(new DatabaseOptions()
 if (string.IsNullOrEmpty(cache))
 	builder.Services.AddSingleton<ICache, MemoryCache>();
 else
-	builder.Services.AddSingleton<ICache, DatabaseCache>();
+	builder.Services.AddSingleton<ICache, HybridCache>();
 
 // Register bot modules
 builder.Services.AddSingleton<ISubscriber, CommandService>();
