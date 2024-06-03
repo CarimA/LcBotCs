@@ -39,15 +39,10 @@ public class HybridCache : ICache
 
 	public async Task<T> GetOrCreate<T>(string key, Func<Task<T>> create, TimeSpan timeToLive) where T : class
 	{
-		var memCachedResult = await _memoryCache.Get<T>(key);
+		var result = await Get<T>(key);
 
-		if (memCachedResult != null)
-			return memCachedResult;
-
-		var dbCachedResult = await _databaseCache.Get<T>(key);
-
-		if (dbCachedResult != null)
-			return dbCachedResult;
+		if (result != null)
+			return result;
 
 		var obj = await create();
 		await Create(key, obj, timeToLive);
