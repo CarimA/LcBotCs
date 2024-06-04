@@ -70,5 +70,5 @@ public class Repository<T> where T : DatabaseObject
 		return Builders<T>.Filter.Eq(r => r.Id, item.Id);
 	}
 
-	public IQueryable<T> Query => _collection.AsQueryable();
+	public IMongoQueryable<T> Query => _collection.AsQueryable();
 }

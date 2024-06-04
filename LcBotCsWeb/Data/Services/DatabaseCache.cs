@@ -6,7 +6,7 @@ namespace LcBotCsWeb.Data.Services;
 
 public class DatabaseCache : ICache
 {
-	private readonly Repository<DatabaseObjectWrapper<CachedItem>> _collection;
+	private readonly Repository<CachedItem> _collection;
 
 	public DatabaseCache(Database database)
 	{
@@ -18,28 +18,28 @@ public class DatabaseCache : ICache
 		if (obj == null)
 			return false;
 
-		await _collection.Upsert(new DatabaseObjectWrapper<CachedItem>() { Data = new CachedItem(key, obj, DateTime.UtcNow + timeToLive) });
+		await _collection.Upsert(new CachedItem(key, obj, DateTime.UtcNow + timeToLive));
 		return true;
 	}
 
 	public async Task<bool> Delete(string key)
 	{
-		var num = await _collection.Delete(item => item.Data.Key == key);
+		var num = await _collection.Delete(item => item.Key == key);
 		return num > 0;
 	}
 
 	public async Task<T?> Get<T>(string key) where T : class
 	{
-		var result = (await _collection.Find(item => item.Data.Key == key)).FirstOrDefault();
+		var result = (await _collection.Find(item => item.Key == key)).FirstOrDefault();
 
 		if (result == null)
 			return null;
 
-		if (result.Data.Expires > DateTime.UtcNow)
-			if (result.Data.Object is T t)
+		if (result.Expires > DateTime.UtcNow)
+			if (result.Object is T t)
 				return t;
 
-		await Delete(result.Data.Key);
+		await Delete(result.Key);
 		return null;
 	}
 
@@ -62,6 +62,6 @@ public class DatabaseCache : ICache
 
 	public async Task Cleanup()
 	{
-		await _collection.Delete(item => item.Data.Expires < DateTime.UtcNow);
+		await _collection.Delete(item => item.Expires < DateTime.UtcNow);
 	}
 }

@@ -5,6 +5,7 @@ using LcBotCsWeb.Data.Models;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Data.Services;
 using LcBotCsWeb.Modules.Commands;
+using LcBotCsWeb.Modules.PsimDiscordLink;
 using LcBotCsWeb.Modules.SampleTeams;
 using LcBotCsWeb.Modules.Startup;
 using LcBotCsWeb.Modules.ViabilityRankings;
@@ -21,12 +22,18 @@ string GetEnvVar(string key, string container)
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Services.AddSingleton<IHostedService, RoomBotService>();
-builder.Services.AddSingleton<PsimClient>();
+builder.Services.AddHostedService<PsimBotService>().AddSingleton(x => x.GetServices<IHostedService>().OfType<PsimBotService>().First());
 builder.Services.AddSingleton(new PsimClientOptions()
 {
 	Username = GetEnvVar("PSIM_USERNAME", nameof(PsimClientOptions)),
 	Password = GetEnvVar("PSIM_PASSWORD", nameof(PsimClientOptions))
+});
+
+builder.Services.AddHostedService<DiscordBotService>().AddSingleton(x => x.GetServices<IHostedService>().OfType<DiscordBotService>().First());
+builder.Services.AddSingleton(new DiscordBotOptions()
+{
+	Token = GetEnvVar("DISCORD_TOKEN", nameof(DiscordBotOptions)),
+	GuildId = ulong.Parse(GetEnvVar("DISCORD_GUILD_ID", nameof(DiscordBotOptions)))
 });
 
 var cache = Environment.GetEnvironmentVariable("DATABASE_CACHE_COLLECTION");
@@ -59,6 +66,8 @@ builder.Services.AddSingleton<ICommand, SamplesCommand>();
 
 builder.Services.AddSingleton<ViabilityRankingsService>();
 builder.Services.AddSingleton<ICommand, ViabilityRankingsCommand>();
+
+builder.Services.AddSingleton<ICommand, PsimVerifyCommand>();
 
 var app = builder.Build();
 

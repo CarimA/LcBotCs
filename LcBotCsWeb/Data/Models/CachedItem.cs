@@ -1,6 +1,6 @@
 ﻿namespace LcBotCsWeb.Data.Models;
 
-public class CachedItem
+public class CachedItem : DatabaseObject
 {
 	public string Key { get; set; }
 	public DateTime Expires { get; set; }

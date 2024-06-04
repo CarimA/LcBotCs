@@ -4,15 +4,15 @@ using PsimCsLib.PubSub;
 
 namespace LcBotCsWeb;
 
-public class RoomBotService : BackgroundService
+public class PsimBotService : BackgroundService
 {
-	private readonly PsimClient _psimClient;
+	public PsimClient Client { get; }
 	private readonly IHostApplicationLifetime _lifeTime;
 
-	public RoomBotService(IServiceScopeFactory scopeFactory, PsimClient psimClient,
+	public PsimBotService(IServiceScopeFactory scopeFactory, PsimClientOptions options,
 		IHostApplicationLifetime lifeTime) : base(scopeFactory)
 	{
-		_psimClient = psimClient;
+		Client = new PsimClient(options);
 		_lifeTime = lifeTime;
 	}
 
@@ -22,13 +22,13 @@ public class RoomBotService : BackgroundService
 		var modules = scope.ServiceProvider.GetServices<ISubscriber>();
 
 		foreach (var module in modules)
-			_psimClient.Subscribe(module);
+			Client.Subscribe(module);
 
 		while (true)
 		{
 			try
 			{
-				await _psimClient.Connect(false);
+				await Client.Connect(false);
 			}
 			catch (Exception ex)
 			{
@@ -42,7 +42,7 @@ public class RoomBotService : BackgroundService
 
 	public override async Task StopAsync(CancellationToken cancellationToken)
 	{
-		_psimClient.Disconnect("Cancellation requested");
+		Client.Disconnect("Cancellation requested");
 		_lifeTime.StopApplication();
 	}
 }
