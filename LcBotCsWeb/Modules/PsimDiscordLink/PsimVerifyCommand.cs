@@ -7,6 +7,7 @@ using LcBotCsWeb.Modules.Commands;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
+using Sprache;
 
 namespace LcBotCsWeb.Modules.PsimDiscordLink;
 
@@ -36,16 +37,16 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 
 		if ((await _database.AccountLinks.Find(accountLink => accountLink.DiscordId == id)).Any())
 		{
-			await RespondAsync("You have already linked a Pokémon Showdown account to your Discord account.", null, false, false);
+			await RespondAsync("You have already linked a Pokémon Showdown account to your Discord account.", null, false, true);
 			return;
 		}
 
 		code = code.Trim().ToLowerInvariant();
 		var result = await _database.VerificationCodes.Query.FirstOrDefaultAsync(c => c.Code == code);
 
-		if (result == null)
+		if (await IsVerificationCodeNullOrExpired(result))
 		{
-			await RespondAsync($"`{code}` is an invalid code.", null, false, false);
+			await RespondAsync($"`{code}` is an invalid or expired code.", null, false, true);
 			return;
 		}
 
@@ -56,7 +57,7 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 			PsimDisplayName = result.DisplayName
 		});
 
-		await RespondAsync($"{result.DisplayName} on Pokémon Showdown has been linked to your Discord account!", null, false, false);
+		await RespondAsync($"{result.DisplayName} on Pokémon Showdown has been linked to your Discord account!", null, false, true);
 	}
 	
 	public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, CommandResponse respond)
@@ -84,9 +85,8 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 	{
 		var result = await _database.VerificationCodes.Query.FirstOrDefaultAsync(code => code.Token == token);
 
-		if (result != null && DateTime.UtcNow > result.Expiry)
+		if (await IsVerificationCodeNullOrExpired(result))
 		{
-			await _database.VerificationCodes.Delete(result);
 			result = null;
 		}
 
@@ -97,6 +97,18 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 		}
 
 		return result;
+	}
+
+	private async Task<bool> IsVerificationCodeNullOrExpired(VerificationCodeItem? item)
+	{
+		if (item == null)
+			return true;
+
+		if (DateTime.UtcNow <= item.Expiry) 
+			return false;
+
+		await _database.VerificationCodes.Delete(item);
+		return true;
 	}
 
 	private VerificationCodeItem GenerateVerificationCode(string displayName, string token)
