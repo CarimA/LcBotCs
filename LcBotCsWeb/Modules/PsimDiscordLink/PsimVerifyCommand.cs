@@ -1,13 +1,11 @@
-﻿using System.Diagnostics;
-using System.Diagnostics.Contracts;
+﻿using Discord;
 using Discord.Interactions;
-using LcBotCsWeb.Data.Interfaces;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.Commands;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
-using Sprache;
+using System.Reflection;
 
 namespace LcBotCsWeb.Modules.PsimDiscordLink;
 
@@ -15,6 +13,8 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 {
 	private readonly Database _database;
 	private readonly DiscordBotService _discord;
+	private readonly BridgeOptions _bridgeOptions;
+	private readonly IServiceProvider _serviceProvider;
 
 	public List<string> Aliases => new List<string>() { "link" };
 	public string HelpText => string.Empty;
@@ -24,19 +24,43 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 	public bool AllowPrivate => true;
 	public bool AcceptIntro => false;
 
-	public PsimVerifyCommand(Database database, DiscordBotService discord)
+	public PsimVerifyCommand(Database database, DiscordBotService discord, BridgeOptions bridgeOptions, IServiceProvider serviceProvider)
 	{
 		_database = database;
 		_discord = discord;
+		_bridgeOptions = bridgeOptions;
+		_serviceProvider = serviceProvider;
+
+		discord.Client.Ready += ClientOnReady;
+	}
+
+	private async Task ClientOnReady()
+	{
+		await _discord.Interaction.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
+
+		await Task.WhenAll(_bridgeOptions.LinkedGuilds.Select(linkedGuild =>
+			_discord.Interaction.RegisterCommandsToGuildAsync(linkedGuild.GuildId)));
 	}
 
 	[SlashCommand("link", "Link your Pokémon Showdown account to Discord")]
 	public async Task LinkDiscordAccount(string code)
 	{
-		var id = Context.Interaction.User.Id;
+		if (Context.Interaction.User is not IGuildUser user)
+			return;
 
-		if ((await _database.AccountLinks.Find(accountLink => accountLink.DiscordId == id)).Any())
+		var id = user.Id;
+		var guildId = user.GuildId;
+		var config = _bridgeOptions.LinkedGuilds.FirstOrDefault(linkedGuild => linkedGuild.GuildId == guildId);
+
+		if (config == null)
 		{
+			await RespondAsync("This command is not supported on this server.", null, false, true);
+			return;
+		}
+
+		if ((await _database.AccountLinks.Find(accountLink => accountLink.DiscordId == id)).Count != 0)
+		{
+			await user.AddRoleAsync(config.RoleId);
 			await RespondAsync("You have already linked a Pokémon Showdown account to your Discord account.", null, false, true);
 			return;
 		}
@@ -56,7 +80,8 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 			DiscordId = id,
 			PsimDisplayName = result.DisplayName
 		});
-
+		
+		await user.AddRoleAsync(config.RoleId);
 		await RespondAsync($"{result.DisplayName} on Pokémon Showdown has been linked to your Discord account!", null, false, true);
 	}
 	

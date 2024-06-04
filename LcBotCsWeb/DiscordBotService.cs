@@ -2,17 +2,16 @@ using System.Reflection;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using LcBotCsWeb.Modules.PsimDiscordLink;
 
 namespace LcBotCsWeb;
 
 public class DiscordBotService : BackgroundService
 {
 	public DiscordSocketClient Client { get; }
+	public InteractionService Interaction { get; }
 	private readonly DiscordBotOptions _config;
 	private readonly IHostApplicationLifetime _lifeTime;
 	private readonly IServiceProvider _serviceProvider;
-	private readonly InteractionService _interactionService;
 
 	public DiscordBotService(IServiceScopeFactory scopeFactory, DiscordBotOptions config, IHostApplicationLifetime lifeTime, IServiceProvider serviceProvider) : base(scopeFactory)
 	{
@@ -20,14 +19,14 @@ public class DiscordBotService : BackgroundService
 		{
 			GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
 		});
-		_interactionService = new InteractionService(Client);
+		Interaction = new InteractionService(Client);
 		_config = config;
 		_lifeTime = lifeTime;
 		_serviceProvider = serviceProvider;
 
-		Client.Ready += ClientOnReady;
 		Client.Disconnected += async (ex) => await StopAsync(CancellationToken.None);
 		Client.MessageReceived += ClientOnMessageReceived;
+		Client.InteractionCreated += ClientOnInteractionCreated;
 	}
 
 	private async Task ClientOnMessageReceived(SocketMessage arg)
@@ -35,24 +34,12 @@ public class DiscordBotService : BackgroundService
 		System.Diagnostics.Debug.WriteLine($"{arg.Author.GlobalName}: {arg.Content}");
 	}
 
-	private async Task ClientOnReady()
-	{
-		await _interactionService.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
-
-		//await _interactionService.AddModuleAsync<PsimVerifyCommand>(_serviceProvider);
-
-		await _interactionService.RegisterCommandsToGuildAsync(_config.GuildId);
-
-		Client.InteractionCreated += ClientOnInteractionCreated;
-	}
-
 	private async Task ClientOnInteractionCreated(SocketInteraction interaction)
 	{
 		var scope = _serviceProvider.CreateScope();
 		var context = new SocketInteractionContext(Client, interaction);
-		await _interactionService.ExecuteCommandAsync(context, scope.ServiceProvider);
+		await Interaction.ExecuteCommandAsync(context, scope.ServiceProvider);
 	}
-
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
