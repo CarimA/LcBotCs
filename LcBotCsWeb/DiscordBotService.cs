@@ -1,4 +1,3 @@
-using System.Reflection;
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
@@ -29,9 +28,10 @@ public class DiscordBotService : BackgroundService
 		Client.InteractionCreated += ClientOnInteractionCreated;
 	}
 
-	private async Task ClientOnMessageReceived(SocketMessage arg)
+	private Task ClientOnMessageReceived(SocketMessage arg)
 	{
 		System.Diagnostics.Debug.WriteLine($"{arg.Author.GlobalName}: {arg.Content}");
+		return Task.CompletedTask;
 	}
 
 	private async Task ClientOnInteractionCreated(SocketInteraction interaction)

@@ -40,9 +40,10 @@ public class PsimBotService : BackgroundService
 		}
 	}
 
-	public override async Task StopAsync(CancellationToken cancellationToken)
+	public override Task StopAsync(CancellationToken cancellationToken)
 	{
 		Client.Disconnect("Cancellation requested");
 		_lifeTime.StopApplication();
+		return Task.CompletedTask;
 	}
 }

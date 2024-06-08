@@ -12,6 +12,7 @@ namespace LcBotCsWeb.Modules.PsimDiscordLink;
 public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>, ICommand 
 {
 	private readonly Database _database;
+	private readonly PsimBotService _psim;
 	private readonly DiscordBotService _discord;
 	private readonly BridgeOptions _bridgeOptions;
 	private readonly IServiceProvider _serviceProvider;
@@ -24,9 +25,10 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 	public bool AllowPrivate => true;
 	public bool AcceptIntro => false;
 
-	public PsimVerifyCommand(Database database, DiscordBotService discord, BridgeOptions bridgeOptions, IServiceProvider serviceProvider)
+	public PsimVerifyCommand(Database database, PsimBotService psim, DiscordBotService discord, BridgeOptions bridgeOptions, IServiceProvider serviceProvider)
 	{
 		_database = database;
+		_psim = psim;
 		_discord = discord;
 		_bridgeOptions = bridgeOptions;
 		_serviceProvider = serviceProvider;
@@ -76,11 +78,12 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 
 		await _database.AccountLinks.Insert(new AccountLinkItem()
 		{
-			Alts = new HashSet<string> { result.Token },
 			DiscordId = id,
-			PsimDisplayName = result.DisplayName
+			PsimId = result.DisplayName
 		});
-		
+
+		await _database.VerificationCodes.Delete(result);
+
 		await user.AddRoleAsync(config.RoleId);
 		await RespondAsync($"{result.DisplayName} on Pokémon Showdown has been linked to your Discord account!", null, false, true);
 	}
@@ -89,9 +92,24 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 	{
 		var token = user.Token;
 
-		if ((await _database.AccountLinks.Find(accountLink => accountLink.Alts.Contains(token))).Any())
+		if ((await _database.AccountLinks.Find(accountLink => accountLink.PsimId == token)).Any())
 		{
 			await respond.Send(CommandTarget.Context, "Your Pokémon Showdown username has already been verified.");
+			return;
+		}
+
+		var userDetails = await _psim.Client.GetUserDetails(token, TimeSpan.FromSeconds(5));
+
+		if (userDetails == null)
+		{
+			await respond.Send(CommandTarget.Context,
+				"Something went wrong, try again later. If this issue persists, please let a member of Little Cup staff know.");
+			return;
+		}
+
+		if (!userDetails.IsAutoconfirmed)
+		{
+			await respond.Send(CommandTarget.Context, "You are not autoconfirmed. Please try again in a few days.");
 			return;
 		}
 
