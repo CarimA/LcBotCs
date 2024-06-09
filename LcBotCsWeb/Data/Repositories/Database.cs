@@ -6,6 +6,7 @@ using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using System.Diagnostics;
 using LcBotCsWeb.Modules.PsimDiscordLink;
+using LcBotCsWeb.Modules.AltTracking;
 
 namespace LcBotCsWeb.Data.Repositories;
 
@@ -15,6 +16,7 @@ public class Database
 	public Repository<CachedItem>? Cache { get; }
 	public Repository<AccountLinkItem> AccountLinks { get; }
 	public Repository<VerificationCodeItem> VerificationCodes { get; }
+	public Repository<AltRecord> Alts { get; }
 
 	public Database(DatabaseOptions options)
 	{
@@ -41,6 +43,7 @@ public class Database
 
 			AccountLinks = GetCollection<AccountLinkItem>("account-link");
 			VerificationCodes = GetCollection<VerificationCodeItem>("verification-codes");
+			Alts = GetCollection<AltRecord>("alts");
 		}
 		catch (Exception ex)
 		{

@@ -4,6 +4,7 @@ using LcBotCsWeb.Data.Interfaces;
 using LcBotCsWeb.Data.Models;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Data.Services;
+using LcBotCsWeb.Modules.AltTracking;
 using LcBotCsWeb.Modules.Commands;
 using LcBotCsWeb.Modules.PsimDiscordLink;
 using LcBotCsWeb.Modules.SampleTeams;
@@ -58,9 +59,12 @@ builder.Services.AddSingleton<ICommand, SamplesCommand>();
 builder.Services.AddSingleton<ViabilityRankingsService>();
 builder.Services.AddSingleton<ICommand, ViabilityRankingsCommand>();
 
+builder.Services.AddSingleton<ISubscriber, AltTrackingService>().AddSingleton<AltTrackingService>();
+
 builder.Services.AddSingleton(Utils.GetEnvConfig<BridgeOptions>("BRIDGE_CONFIG", nameof(BridgeOptions)));
 builder.Services.AddSingleton<ICommand, PsimVerifyCommand>();
 builder.Services.AddSingleton<ISubscriber, BridgeService>();
+
 
 var app = builder.Build();
 
