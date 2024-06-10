@@ -19,13 +19,7 @@ namespace LcBotCsWeb.Modules.PsimDiscordLink;
 	}
 }
 
-public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<>*/
-
-public class Alts
-{
-	public HashSet<string> PsimIds { get; set; }
-}
-
+*/
 
 public class ActivePunishment
 {
@@ -100,7 +94,7 @@ public class BridgeService : ISubscriber<ChatMessage>
 		var displayRank = (Rank)Math.Max((int)globalRank, (int)roomRank);
 
 		var psimRank = PsimUsername.FromRank(displayRank).Trim();
-		var psimName = $"{user.PsimId}";
+		var psimName = $"{user.PsimDisplayName}";
 		var message = msg.CleanContent.Replace("\n", ". ").Trim();
 
 		if (message.ToLowerInvariant().Contains("discord.gg"))

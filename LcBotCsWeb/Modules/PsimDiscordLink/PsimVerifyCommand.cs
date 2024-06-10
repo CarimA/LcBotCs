@@ -79,7 +79,8 @@ public class PsimVerifyCommand : InteractionModuleBase<SocketInteractionContext>
 		await _database.AccountLinks.Insert(new AccountLinkItem()
 		{
 			DiscordId = id,
-			PsimId = result.DisplayName
+			PsimDisplayName = result.DisplayName,
+			PsimId = result.Token
 		});
 
 		await _database.VerificationCodes.Delete(result);
