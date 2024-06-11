@@ -34,49 +34,66 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 
     private async Task TryAddUser(PsimUsername username)
     {
-        var records = await _database.Alts.Find(alts => alts.PsimId == username.Token);
+        var records = await _database.Alts.Find(alts => alts.Alts.Any(alt => alt.PsimId == username.Token));
 
         if (records.Count > 0)
             return;
 
-        await _database.Alts.Insert(new AltRecord() { PsimId = username.Token, AltId = ObjectId.GenerateNewId() });
+        var alt = new PsimAlt() { PsimId = username.Token, PsimDisplayName = username.DisplayName };
+        var psimUser = new PsimUserItem() { Active = alt, Alts = new List<PsimAlt>() { alt }, AltId = ObjectId.GenerateNewId() };
+
+        await _database.Alts.Insert(psimUser);
     }
 
-    private async Task TryAddAlt(string id, PsimUsername alt)
+    private async Task TryAddAlt(string id, PsimUsername username)
     {
         var results = await _database.Alts.Query
-            .Where(alts => alts.PsimId == id || alts.PsimId == alt.Token)
+            .Where(alts => alts.Alts.Any(a => a.PsimId == id) || alts.Alts.Any(a => a.PsimId == username.Token))
             .ToListAsync();
 
         if (results == null || results.Count == 0)
             return;
-
-        var firstId = results.First().AltId;
-
-        foreach (var result in results)
-	        result.AltId = firstId;
-
-        if (results.All(result => result.PsimId != id))
-			results.Add(new AltRecord() { PsimId = id, AltId = firstId });
-
-        if (results.All(result => result.PsimId != alt.Token))
-	        results.Add(new AltRecord() { PsimId = alt.Token, AltId = firstId });
-
-		await Task.WhenAll(results.Select(_database.Alts.Upsert));
+        
+        await MergeUser(results, username);
     }
 
-    public async Task<List<string>> GetAlts(string id)
+    private async Task<PsimUserItem?> MergeUser(List<PsimUserItem> users, PsimUsername username)
+    {
+	    switch (users.Count)
+	    {
+		    case 0:
+			    return null;
+	    }
+
+	    var firstId = users.First().AltId;
+	    var active = new PsimAlt() { PsimId = username.Token, PsimDisplayName = username.DisplayName };
+	    var alts = users.SelectMany(result => result.Alts).ToList();
+	    alts.Add(active);
+
+	    var psimUser = new PsimUserItem() { Active = active, Alts = alts.Distinct().ToList(), AltId = firstId };
+
+	    foreach (var result in users)
+		    await _database.Alts.Delete(result);
+
+	    await _database.Alts.Insert(psimUser);
+        return psimUser;
+	}
+
+    public async Task<PsimUserItem?> GetUser(ObjectId id)
+    {
+	    return await _database.Alts.Query.FirstOrDefaultAsync(alts => alts.AltId == id);
+    }
+
+	public async Task<PsimUserItem?> GetUser(PsimUsername username)
 	{
 		var results = await _database.Alts.Query
-			.Where(alts => alts.PsimId == id)
+			.Where(alts => alts.Alts.Any(alt => alt.PsimId == username.Token))
 			.ToListAsync();
 
 		if (results == null || results.Count == 0)
-			return new List<string>();
+			return null;
 
-		var firstId = results.First().AltId;
-
-		var final = await _database.Alts.Find(result => result.AltId == firstId);
-		return final.Select(result => result.PsimId).ToList();
-    }
+		var user = await MergeUser(results, username);
+		return user;
+	}
 }

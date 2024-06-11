@@ -62,7 +62,9 @@ builder.Services.AddSingleton<ICommand, ViabilityRankingsCommand>();
 builder.Services.AddSingleton<ISubscriber, AltTrackingService>().AddSingleton<AltTrackingService>();
 
 builder.Services.AddSingleton(Utils.GetEnvConfig<BridgeOptions>("BRIDGE_CONFIG", nameof(BridgeOptions)));
-builder.Services.AddSingleton<ICommand, PsimVerifyCommand>();
+builder.Services.AddSingleton<VerificationService>();
+builder.Services.AddSingleton<ICommand, VerifyCommand>();
+builder.Services.AddSingleton<DiscordVerifyCommand>().ActivateSingleton<DiscordVerifyCommand>();
 builder.Services.AddSingleton<ISubscriber, BridgeService>();
 
 

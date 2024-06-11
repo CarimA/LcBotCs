@@ -3,6 +3,7 @@ using Discord;
 using Discord.WebSocket;
 using Ganss.Xss;
 using LcBotCsWeb.Data.Repositories;
+using LcBotCsWeb.Modules.AltTracking;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
@@ -21,26 +22,23 @@ namespace LcBotCsWeb.Modules.PsimDiscordLink;
 
 */
 
-public class ActivePunishment
-{
-	public string PsimId { get; set; }
-	public DateTime Expires { get; set; }
-}
-
 public class BridgeService : ISubscriber<ChatMessage>
 {
 	private readonly Database _database;
 	private readonly DiscordBotService _discord;
 	private readonly BridgeOptions _bridgeOptions;
 	private readonly PsimBotService _psim;
+	private readonly AltTrackingService _altTracking;
 	private readonly HtmlSanitizer _sanitiser;
 
-	public BridgeService(Database database, DiscordBotService discord, BridgeOptions bridgeOptions, PsimBotService psim)
+	public BridgeService(Database database, DiscordBotService discord, BridgeOptions bridgeOptions, PsimBotService psim,
+		AltTrackingService altTracking)
 	{
 		_database = database;
 		_discord = discord;
 		_bridgeOptions = bridgeOptions;
 		_psim = psim;
+		_altTracking = altTracking;
 		_sanitiser = new HtmlSanitizer();
 		discord.Client.MessageReceived += ClientOnMessageReceived;
 	}
@@ -76,12 +74,26 @@ public class BridgeService : ISubscriber<ChatMessage>
 			return;
 		}
 
-		var userDetails = await _psim.Client.GetUserDetails(user.PsimId, TimeSpan.FromSeconds(2));
+		var psimUser = await _altTracking.GetUser(user.PsimUser);
+
+		if (psimUser == null)
+		{
+			await msg.AddReactionAsync(new Emoji("❌"));
+			return;
+		}
+
+		var userDetails = await _psim.Client.GetUserDetails(psimUser.Active.PsimId, TimeSpan.FromSeconds(2));
+
+		if (userDetails == null)
+		{
+			await msg.AddReactionAsync(new Emoji("❌"));
+			return;
+		}
+
 		var roomRank = userDetails.Rooms.TryGetValue(config.PsimRoom, out var rank) ? rank : Rank.Normal;
 
 		// if the user is globally locked or actively muted in the psim room, move on
-		if (userDetails == null || userDetails.GlobalRank == Rank.Locked || 
-		    (roomRank is Rank.Locked or Rank.Muted))
+		if (userDetails.GlobalRank == Rank.Locked || (roomRank is Rank.Locked or Rank.Muted))
 		{
 			await msg.AddReactionAsync(new Emoji("❌"));
 			return;
@@ -94,7 +106,7 @@ public class BridgeService : ISubscriber<ChatMessage>
 		var displayRank = (Rank)Math.Max((int)globalRank, (int)roomRank);
 
 		var psimRank = PsimUsername.FromRank(displayRank).Trim();
-		var psimName = $"{user.PsimDisplayName}";
+		var psimName = $"{psimUser.Active.PsimDisplayName}";
 		var message = msg.CleanContent.Replace("\n", ". ").Trim();
 
 		if (message.ToLowerInvariant().Contains("discord.gg"))

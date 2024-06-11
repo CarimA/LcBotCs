@@ -16,7 +16,7 @@ public class Database
 	public Repository<CachedItem>? Cache { get; }
 	public Repository<AccountLinkItem> AccountLinks { get; }
 	public Repository<VerificationCodeItem> VerificationCodes { get; }
-	public Repository<AltRecord> Alts { get; }
+	public Repository<PsimUserItem> Alts { get; }
 
 	public Database(DatabaseOptions options)
 	{
@@ -43,7 +43,7 @@ public class Database
 
 			AccountLinks = GetCollection<AccountLinkItem>("account-link");
 			VerificationCodes = GetCollection<VerificationCodeItem>("verification-codes");
-			Alts = GetCollection<AltRecord>("alts");
+			Alts = GetCollection<PsimUserItem>("alts");
 		}
 		catch (Exception ex)
 		{
