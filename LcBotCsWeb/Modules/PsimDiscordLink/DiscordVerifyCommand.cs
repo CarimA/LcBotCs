@@ -71,9 +71,4 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 		var alts = await _altTracking.GetUser(result.PsimUser);
 		await RespondAsync($"{alts?.Active.PsimDisplayName} on Pokémon Showdown have been linked to your Discord account!", null, false, true);
 	}
-
-	public void Initialize()
-	{
-
-	}
 }

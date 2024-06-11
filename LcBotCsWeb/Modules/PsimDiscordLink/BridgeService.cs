@@ -12,16 +12,6 @@ using PsimCsLib.PubSub;
 
 namespace LcBotCsWeb.Modules.PsimDiscordLink;
 
-/*public class ApplyPunishmentsService : ISubscriber<ChatMessage>
-{
-	public Task HandleEvent(ChatMessage e)
-	{
-
-	}
-}
-
-*/
-
 public class BridgeService : ISubscriber<ChatMessage>
 {
 	private readonly Database _database;
@@ -29,16 +19,18 @@ public class BridgeService : ISubscriber<ChatMessage>
 	private readonly BridgeOptions _bridgeOptions;
 	private readonly PsimBotService _psim;
 	private readonly AltTrackingService _altTracking;
+	private readonly VerificationService _verification;
 	private readonly HtmlSanitizer _sanitiser;
 
 	public BridgeService(Database database, DiscordBotService discord, BridgeOptions bridgeOptions, PsimBotService psim,
-		AltTrackingService altTracking)
+		AltTrackingService altTracking, VerificationService verification)
 	{
 		_database = database;
 		_discord = discord;
 		_bridgeOptions = bridgeOptions;
 		_psim = psim;
 		_altTracking = altTracking;
+		_verification = verification;
 		_sanitiser = new HtmlSanitizer();
 		discord.Client.MessageReceived += ClientOnMessageReceived;
 	}
@@ -107,7 +99,7 @@ public class BridgeService : ISubscriber<ChatMessage>
 
 		var psimRank = PsimUsername.FromRank(displayRank).Trim();
 		var psimName = $"{psimUser.Active.PsimDisplayName}";
-		var message = msg.CleanContent.Replace("\n", ". ").Trim();
+		var message = msg.Content.Replace("\n", ". ").Trim();
 
 		if (message.ToLowerInvariant().Contains("discord.gg"))
 		{
@@ -124,10 +116,15 @@ public class BridgeService : ISubscriber<ChatMessage>
 			// ignored
 		}
 
+		// remember that everything after here is going to be sanitised
+
 		message = Regex.Replace(message, "\\*\\*(.*?)\\*\\*", "<strong>$1</strong>");
 		message = Regex.Replace(message, "__(.*?)__", "<u>$1</u>");
 		message = Regex.Replace(message, "\\*(.*?)\\*", "<em>$1</em>");
 		message = Regex.Replace(message, "~~(.*?)~~", "<s>$1</s>");
+
+		// replace mentions with psim names
+		message = await message.ReplaceAsync(new Regex("&lt;@!*&*([0-9]+)&gt;", RegexOptions.Singleline), RegexGetPsimName(channel));
 
 		if (string.IsNullOrEmpty(message))
 			return;
@@ -136,6 +133,32 @@ public class BridgeService : ISubscriber<ChatMessage>
 		var output =
 			$"/adduhtml {psimId},<strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span> <small>[<a href=\"{config.DiscordInviteUrl}\">via Bridge</a>]</small>:</strong> <em>{message}</em>";
 		await _psim.Client.Rooms[config.PsimRoom].Send(output);
+	}
+
+	private Func<Match, Task<string>> RegexGetPsimName(ITextChannel channel)
+	{
+		return async (match) =>
+		{
+			try
+			{
+				var id = ulong.Parse(match.Groups[1].Value);
+				var user = await _verification.GetVerifiedUserByDiscordId(id);
+
+				if (user != null)
+					return $"<span class=\"username\"><username>{user.Active.PsimDisplayName}</username></span>";
+
+				var discordUser = await channel.GetUserAsync(id);
+
+				if (discordUser != null)
+					return discordUser.DisplayName;
+			}
+			catch
+			{
+				return string.Empty;
+			}
+
+			return string.Empty;
+		};
 	}
 
 	public async Task HandleEvent(ChatMessage msg)

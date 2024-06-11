@@ -65,7 +65,23 @@ public class VerificationService
 
 	public async Task<bool> IsDiscordIdVerified(ulong id)
 	{
-		return (await _database.AccountLinks.Find(accountLink => accountLink.DiscordId == id)).Count != 0;
+		return await GetVerifiedLinkByDiscordId(id) != null;
+	}
+
+	private async Task<AccountLinkItem?> GetVerifiedLinkByDiscordId(ulong id)
+	{
+		return (await _database.AccountLinks.Find(accountLink => accountLink.DiscordId == id)).FirstOrDefault();
+	}
+
+	public async Task<PsimUserItem?> GetVerifiedUserByDiscordId(ulong id)
+	{
+		var link = await GetVerifiedLinkByDiscordId(id);
+
+		if (link == null)
+			return null;
+
+		var user = await _altTracking.GetUser(link.PsimUser);
+		return user;
 	}
 
 	public async Task<bool> IsUserVerified(PsimUsername username)
