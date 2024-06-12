@@ -1,9 +1,7 @@
-﻿using System.Reflection;
-using System.Reflection.Metadata.Ecma335;
-using Discord;
+﻿using Discord;
 using Discord.Interactions;
 using LcBotCsWeb.Modules.AltTracking;
-using LcBotCsWeb.Modules.Commands;
+using System.Reflection;
 
 namespace LcBotCsWeb.Modules.PsimDiscordLink;
 
@@ -15,7 +13,7 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 	private readonly IServiceProvider _serviceProvider;
 	private readonly BridgeOptions _bridgeOptions;
 
-	public DiscordVerifyCommand(VerificationService verification, AltTrackingService altTracking, DiscordBotService discord, 
+	public DiscordVerifyCommand(VerificationService verification, AltTrackingService altTracking, DiscordBotService discord,
 		IServiceProvider serviceProvider, BridgeOptions bridgeOptions)
 	{
 		_verification = verification;
@@ -50,7 +48,8 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 			return;
 		}
 
-		if ((await _verification.IsDiscordIdVerified(id)))
+		var psimUser = await _verification.GetVerifiedUserByDiscordId(id);
+		if (psimUser == null)
 		{
 			await user.AddRoleAsync(config.RoleId);
 			await RespondAsync("You have already linked a Pokémon Showdown account to your Discord account.", null, false, true);
@@ -60,7 +59,7 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 		code = code.Trim().ToLowerInvariant();
 		var result = await _verification.MatchCode(code);
 
-		if (await _verification.IsVerificationCodeNullOrExpired(result))
+		if (result == null || await _verification.IsVerificationCodeNullOrExpired(result))
 		{
 			await RespondAsync($"`{code}` is an invalid or expired code.", null, false, true);
 			return;

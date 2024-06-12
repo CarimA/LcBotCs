@@ -12,7 +12,8 @@ public static class Utils
 
 	public static T GetEnvConfig<T>(string key, string container)
 	{
-		return JsonConvert.DeserializeObject<T>(GetEnvVar(key, container) ?? throw new ArgumentNullException($"{key} is malformed"));
+		var obj = JsonConvert.DeserializeObject<T>(GetEnvVar(key, container));
+		return obj == null ? throw new ArgumentNullException($"{key} is malformed") : obj;
 	}
 
 }

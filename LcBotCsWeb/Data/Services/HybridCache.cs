@@ -17,7 +17,7 @@ public class HybridCache : ICache
 	public async Task<bool> Create(string key, object obj, TimeSpan timeToLive)
 	{
 		var results = await Task.WhenAll(
-			_memoryCache.Create(key, obj, timeToLive), 
+			_memoryCache.Create(key, obj, timeToLive),
 			_databaseCache.Create(key, obj, timeToLive));
 
 		return results.Any(result => result);

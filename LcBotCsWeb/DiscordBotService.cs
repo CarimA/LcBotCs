@@ -1,7 +1,6 @@
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
-using LcBotCsWeb.Modules.Commands;
 
 namespace LcBotCsWeb;
 

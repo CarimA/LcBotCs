@@ -42,7 +42,7 @@ namespace LcBotCsWeb.Modules.SampleTeams
 						results.AddRange(teams);
 				}
 			}
-			catch (HttpRequestException _)
+			catch (HttpRequestException)
 			{
 				await respond.SendHtml(CommandTarget.Context, "expanded-samples", "There was an error handling your request. Try again later.");
 			}

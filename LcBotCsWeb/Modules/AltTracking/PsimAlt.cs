@@ -7,7 +7,7 @@ public class PsimAlt : IEquatable<PsimAlt>
 
 	public bool Equals(PsimAlt? other)
 	{
-		return PsimId == other.PsimId;
+		return PsimId == other?.PsimId;
 	}
 
 	public override bool Equals(object? obj)

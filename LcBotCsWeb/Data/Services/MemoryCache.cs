@@ -17,7 +17,7 @@ public class MemoryCache : ICache
 
 	public Task<bool> Delete(string key)
 		=> Task.FromResult(_cache.Remove(key));
-	
+
 	public async Task<T?> Get<T>(string key) where T : class
 	{
 		if (!_cache.TryGetValue(key, out var obj))

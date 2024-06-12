@@ -83,7 +83,7 @@ public class CommandService : ISubscriber<PrivateMessage>, ISubscriber<ChatMessa
 		{
 			await command.Execute(timePosted, user, room, parameters, response);
 		}
-		catch (Exception ex)
+		catch (Exception)
 		{
 			await response.Send(CommandTarget.Context, "An error occurred processing your command.");
 			throw;

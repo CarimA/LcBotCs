@@ -63,11 +63,6 @@ public class VerificationService
 		};
 	}
 
-	public async Task<bool> IsDiscordIdVerified(ulong id)
-	{
-		return await GetVerifiedLinkByDiscordId(id) != null;
-	}
-
 	private async Task<AccountLinkItem?> GetVerifiedLinkByDiscordId(ulong id)
 	{
 		return (await _database.AccountLinks.Find(accountLink => accountLink.DiscordId == id)).FirstOrDefault();

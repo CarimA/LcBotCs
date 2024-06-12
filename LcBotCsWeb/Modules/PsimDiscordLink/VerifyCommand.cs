@@ -1,11 +1,10 @@
-﻿using LcBotCsWeb.Data.Repositories;
-using LcBotCsWeb.Modules.Commands;
+﻿using LcBotCsWeb.Modules.Commands;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
 
 namespace LcBotCsWeb.Modules.PsimDiscordLink;
 
-public class VerifyCommand : ICommand 
+public class VerifyCommand : ICommand
 {
 	private readonly VerificationService _verification;
 	private readonly PsimBotService _psim;

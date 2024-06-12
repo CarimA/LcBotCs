@@ -1,5 +1,4 @@
-﻿using System.Text.RegularExpressions;
-using Discord;
+﻿using Discord;
 using Discord.WebSocket;
 using Ganss.Xss;
 using LcBotCsWeb.Data.Repositories;
@@ -9,6 +8,7 @@ using PsimCsLib.Entities;
 using PsimCsLib.Enums;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
+using System.Text.RegularExpressions;
 
 namespace LcBotCsWeb.Modules.PsimDiscordLink;
 
@@ -186,7 +186,7 @@ public class BridgeService : ISubscriber<ChatMessage>
 			return;
 
 		var guild = _discord.Client.Guilds.FirstOrDefault(g => g.Id == config.GuildId);
-		if (guild?.Channels.FirstOrDefault(c => c.Id == config.BridgeRoom) is not ITextChannel channel) 
+		if (guild?.Channels.FirstOrDefault(c => c.Id == config.BridgeRoom) is not ITextChannel channel)
 			return;
 
 		await channel.SendMessageAsync(output);
