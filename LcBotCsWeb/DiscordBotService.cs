@@ -1,6 +1,7 @@
 using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using System.Reflection;
 
 namespace LcBotCsWeb;
 
@@ -23,9 +24,15 @@ public class DiscordBotService : BackgroundService
 		_lifeTime = lifeTime;
 		_serviceProvider = serviceProvider;
 
+		Client.Ready += ClientOnReady;
 		Client.Disconnected += async (ex) => await StopAsync(CancellationToken.None);
 		Client.MessageReceived += ClientOnMessageReceived;
 		Client.InteractionCreated += ClientOnInteractionCreated;
+	}
+
+	private async Task ClientOnReady()
+	{
+		await Interaction.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
 	}
 
 	private Task ClientOnMessageReceived(SocketMessage arg)

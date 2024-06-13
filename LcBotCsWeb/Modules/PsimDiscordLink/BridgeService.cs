@@ -33,6 +33,13 @@ public class BridgeService : ISubscriber<ChatMessage>
 		_verification = verification;
 		_sanitiser = new HtmlSanitizer();
 		discord.Client.MessageReceived += ClientOnMessageReceived;
+
+		discord.Client.UserIsTyping += ClientOnUserIsTyping;
+	}
+
+	private async Task ClientOnUserIsTyping(Cacheable<IUser, ulong> arg1, Cacheable<IMessageChannel, ulong> arg2)
+	{
+		throw new NotImplementedException();
 	}
 
 	private async Task ClientOnMessageReceived(SocketMessage msg)
@@ -126,6 +133,18 @@ public class BridgeService : ISubscriber<ChatMessage>
 		// replace mentions with psim names
 		message = await message.ReplaceAsync(new Regex("&lt;@!*&*([0-9]+)&gt;", RegexOptions.Singleline), RegexGetPsimName(channel));
 
+		var roomUsers = _psim.Client.Rooms[config.PsimRoom].Users.OrderByDescending(u => u.DisplayName.Length);
+
+		foreach (var roomUser in roomUsers)
+		{
+			message = message.Replace($" {roomUser.DisplayName}",
+				$" <span class=\"username\"><username>{roomUser.DisplayName}</username></span>",
+				StringComparison.InvariantCultureIgnoreCase);
+			message = message.Replace($"{roomUser.DisplayName} ",
+				$"<span class=\"username\"><username>{roomUser.DisplayName}</username></span> ",
+				StringComparison.InvariantCultureIgnoreCase);
+		}
+
 		if (string.IsNullOrEmpty(message))
 			return;
 
@@ -189,6 +208,7 @@ public class BridgeService : ISubscriber<ChatMessage>
 		if (guild?.Channels.FirstOrDefault(c => c.Id == config.BridgeRoom) is not ITextChannel channel)
 			return;
 
+		channel.EnterTypingState();
 		await channel.SendMessageAsync(output);
 	}
 }

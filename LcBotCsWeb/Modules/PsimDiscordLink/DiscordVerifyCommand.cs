@@ -1,7 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
 using LcBotCsWeb.Modules.AltTracking;
-using System.Reflection;
 
 namespace LcBotCsWeb.Modules.PsimDiscordLink;
 
@@ -10,24 +9,20 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 	private readonly VerificationService _verification;
 	private readonly AltTrackingService _altTracking;
 	private readonly DiscordBotService _discord;
-	private readonly IServiceProvider _serviceProvider;
 	private readonly BridgeOptions _bridgeOptions;
 
-	public DiscordVerifyCommand(VerificationService verification, AltTrackingService altTracking, DiscordBotService discord,
-		IServiceProvider serviceProvider, BridgeOptions bridgeOptions)
+	public DiscordVerifyCommand(VerificationService verification, AltTrackingService altTracking,
+		DiscordBotService discord, BridgeOptions bridgeOptions)
 	{
 		_verification = verification;
 		_altTracking = altTracking;
 		_discord = discord;
-		_serviceProvider = serviceProvider;
 		_bridgeOptions = bridgeOptions;
 		discord.Client.Ready += ClientOnReady;
 	}
 
 	private async Task ClientOnReady()
 	{
-		await _discord.Interaction.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
-
 		await Task.WhenAll(_bridgeOptions.LinkedGuilds.Select(linkedGuild =>
 			_discord.Interaction.RegisterCommandsToGuildAsync(linkedGuild.GuildId)));
 	}
