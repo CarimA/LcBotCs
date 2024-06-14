@@ -33,15 +33,8 @@ public class BridgeService : ISubscriber<ChatMessage>
 		_verification = verification;
 		_sanitiser = new HtmlSanitizer();
 		discord.Client.MessageReceived += ClientOnMessageReceived;
-
-		discord.Client.UserIsTyping += ClientOnUserIsTyping;
 	}
-
-	private async Task ClientOnUserIsTyping(Cacheable<IUser, ulong> arg1, Cacheable<IMessageChannel, ulong> arg2)
-	{
-		throw new NotImplementedException();
-	}
-
+	
 	private async Task ClientOnMessageReceived(SocketMessage msg)
 	{
 		if (msg.Author.Id == _discord.Client.CurrentUser.Id)
@@ -73,7 +66,7 @@ public class BridgeService : ISubscriber<ChatMessage>
 			return;
 		}
 
-		var psimUser = await _altTracking.GetUser(user.PsimUser);
+		var psimUser = await _altTracking.GetActiveUser(user.PsimUser);
 
 		if (psimUser == null)
 		{
@@ -81,7 +74,7 @@ public class BridgeService : ISubscriber<ChatMessage>
 			return;
 		}
 
-		var userDetails = await _psim.Client.GetUserDetails(psimUser.Active.PsimId, TimeSpan.FromSeconds(2));
+		var userDetails = await _psim.Client.GetUserDetails(psimUser.PsimId, TimeSpan.FromSeconds(2));
 
 		if (userDetails == null)
 		{
@@ -105,7 +98,7 @@ public class BridgeService : ISubscriber<ChatMessage>
 		var displayRank = (Rank)Math.Max((int)globalRank, (int)roomRank);
 
 		var psimRank = PsimUsername.FromRank(displayRank).Trim();
-		var psimName = $"{psimUser.Active.PsimDisplayName}";
+		var psimName = $"{psimUser.PsimDisplayName}";
 		var message = msg.Content.Replace("\n", ". ").Trim();
 
 		if (message.ToLowerInvariant().Contains("discord.gg"))
@@ -164,7 +157,7 @@ public class BridgeService : ISubscriber<ChatMessage>
 				var user = await _verification.GetVerifiedUserByDiscordId(id);
 
 				if (user != null)
-					return $"<span class=\"username\"><username>{user.Active.PsimDisplayName}</username></span>";
+					return $"<span class=\"username\"><username>{user.PsimDisplayName}</username></span>";
 
 				var discordUser = await channel.GetUserAsync(id);
 
@@ -208,7 +201,6 @@ public class BridgeService : ISubscriber<ChatMessage>
 		if (guild?.Channels.FirstOrDefault(c => c.Id == config.BridgeRoom) is not ITextChannel channel)
 			return;
 
-		channel.EnterTypingState();
 		await channel.SendMessageAsync(output);
 	}
 }

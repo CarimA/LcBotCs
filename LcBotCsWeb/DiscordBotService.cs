@@ -26,7 +26,6 @@ public class DiscordBotService : BackgroundService
 
 		Client.Ready += ClientOnReady;
 		Client.Disconnected += async (ex) => await StopAsync(CancellationToken.None);
-		Client.MessageReceived += ClientOnMessageReceived;
 		Client.InteractionCreated += ClientOnInteractionCreated;
 	}
 
@@ -34,13 +33,7 @@ public class DiscordBotService : BackgroundService
 	{
 		await Interaction.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
 	}
-
-	private Task ClientOnMessageReceived(SocketMessage arg)
-	{
-		System.Diagnostics.Debug.WriteLine($"{arg.Author.GlobalName}: {arg.Content}");
-		return Task.CompletedTask;
-	}
-
+	
 	private async Task ClientOnInteractionCreated(SocketInteraction interaction)
 	{
 		var scope = _serviceProvider.CreateScope();

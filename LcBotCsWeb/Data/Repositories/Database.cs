@@ -6,7 +6,6 @@ using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
-using System.Diagnostics;
 
 namespace LcBotCsWeb.Data.Repositories;
 
@@ -16,7 +15,7 @@ public class Database
 	public Repository<CachedItem>? Cache { get; }
 	public Repository<AccountLinkItem> AccountLinks { get; }
 	public Repository<VerificationCodeItem> VerificationCodes { get; }
-	public Repository<PsimUserItem> Alts { get; }
+	public Repository<PsimAlt> Alts { get; }
 
 	public Database(DatabaseOptions options)
 	{
@@ -32,7 +31,7 @@ public class Database
 		try
 		{
 			var result = client.GetDatabase("admin").RunCommand<BsonDocument>(new BsonDocument("ping", 1));
-			Debug.Print("Successfully connected to Mongodb");
+			Console.WriteLine("Successfully connected to Mongodb");
 
 			_database = client.GetDatabase(options.DatabaseName);
 
@@ -43,11 +42,11 @@ public class Database
 
 			AccountLinks = GetCollection<AccountLinkItem>("account-link");
 			VerificationCodes = GetCollection<VerificationCodeItem>("verification-codes");
-			Alts = GetCollection<PsimUserItem>("alts");
+			Alts = GetCollection<PsimAlt>("alts");
 		}
 		catch (Exception ex)
 		{
-			Debug.Print(ex.Message);
+			Console.WriteLine(ex.Message);
 			throw;
 		}
 	}

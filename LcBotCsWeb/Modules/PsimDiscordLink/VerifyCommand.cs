@@ -57,5 +57,6 @@ public class VerifyCommand : ICommand
 		}
 
 		await respond.Send(CommandTarget.Context, $"Use **/link {verification.Code}** on the Little Cup Discord to connect your account. Your verification code will be valid for 15 minutes.");
+		Console.WriteLine($"{user.Token} has started an account link");
 	}
 }

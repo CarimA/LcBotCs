@@ -1,5 +1,6 @@
 ﻿using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
+using MongoDB.Bson;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 
@@ -25,7 +26,7 @@ public class VerificationService
 			return null;
 		}
 
-		var result = await _database.VerificationCodes.Query.FirstOrDefaultAsync(code => code.PsimUser == acc.AltId);
+		var result = await _database.VerificationCodes.Query.FirstOrDefaultAsync(code => acc.Any(a => a.AltId == code.PsimUser));
 
 		if (await IsVerificationCodeNullOrExpired(result))
 		{
@@ -34,7 +35,7 @@ public class VerificationService
 
 		if (result == null)
 		{
-			result = GenerateVerificationCode(acc);
+			result = GenerateVerificationCode(acc.First().AltId);
 			await _database.VerificationCodes.Insert(result);
 		}
 
@@ -53,40 +54,40 @@ public class VerificationService
 		return true;
 	}
 
-	private VerificationCodeItem GenerateVerificationCode(PsimUserItem psimUser)
+	private VerificationCodeItem GenerateVerificationCode(ObjectId id)
 	{
 		return new VerificationCodeItem()
 		{
 			Code = Guid.NewGuid().ToString()[..8].ToLowerInvariant(),
-			PsimUser = psimUser.AltId,
+			PsimUser = id,
 			Expiry = DateTime.UtcNow + TimeSpan.FromMinutes(15)
 		};
 	}
 
 	private async Task<AccountLinkItem?> GetVerifiedLinkByDiscordId(ulong id)
 	{
-		return (await _database.AccountLinks.Find(accountLink => accountLink.DiscordId == id)).FirstOrDefault();
+		return await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == id);
 	}
 
-	public async Task<PsimUserItem?> GetVerifiedUserByDiscordId(ulong id)
+	public async Task<PsimAlt?> GetVerifiedUserByDiscordId(ulong id)
 	{
 		var link = await GetVerifiedLinkByDiscordId(id);
 
 		if (link == null)
 			return null;
 
-		var user = await _altTracking.GetUser(link.PsimUser);
+		var user = await _altTracking.GetActiveUser(link.PsimUser);
 		return user;
 	}
 
 	public async Task<bool> IsUserVerified(PsimUsername username)
 	{
-		var alt = await _altTracking.GetUser(username);
+		var alts = await _altTracking.GetUser(username);
 
-		if (alt == null)
+		if (alts == null)
 			return false;
 
-		return (await _database.AccountLinks.Find(accountLink => accountLink.PsimUser == alt.AltId)).Count != 0;
+		return await _database.AccountLinks.Query.AnyAsync(accountLink => alts.Any(alt => alt.AltId == accountLink.PsimUser));
 	}
 
 	public async Task<VerificationCodeItem?> MatchCode(string code)

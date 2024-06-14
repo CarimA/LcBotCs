@@ -1,9 +1,14 @@
-﻿namespace LcBotCsWeb.Modules.AltTracking;
+﻿using LcBotCsWeb.Data.Models;
+using MongoDB.Bson;
 
-public class PsimAlt : IEquatable<PsimAlt>
+namespace LcBotCsWeb.Modules.AltTracking;
+
+public class PsimAlt : DatabaseObject, IEquatable<PsimAlt>
 {
 	public string PsimId { get; set; }
 	public string PsimDisplayName { get; set; }
+	public bool IsActive { get; set; }
+	public ObjectId AltId { get; set; }
 
 	public bool Equals(PsimAlt? other)
 	{
@@ -17,6 +22,6 @@ public class PsimAlt : IEquatable<PsimAlt>
 
 	public override int GetHashCode()
 	{
-		return HashCode.Combine(PsimId, PsimDisplayName);
+		return HashCode.Combine(PsimId, PsimDisplayName, AltId);
 	}
 }

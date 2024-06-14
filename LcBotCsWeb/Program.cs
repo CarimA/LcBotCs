@@ -67,6 +67,7 @@ builder.Services.AddSingleton<ICommand, VerifyCommand>();
 builder.Services.AddSingleton<DiscordVerifyCommand>().ActivateSingleton<DiscordVerifyCommand>();
 builder.Services.AddSingleton<ISubscriber, BridgeService>();
 
+builder.Services.AddSingleton<DiscordLogger>().ActivateSingleton<DiscordLogger>();
 
 var app = builder.Build();
 

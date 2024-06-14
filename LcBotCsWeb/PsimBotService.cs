@@ -1,6 +1,5 @@
 using PsimCsLib;
 using PsimCsLib.PubSub;
-using System.Diagnostics;
 
 namespace LcBotCsWeb;
 
@@ -32,7 +31,7 @@ public class PsimBotService : BackgroundService
 			}
 			catch (Exception ex)
 			{
-				Trace.WriteLine(ex);
+				Console.WriteLine(ex);
 				throw;
 			}
 

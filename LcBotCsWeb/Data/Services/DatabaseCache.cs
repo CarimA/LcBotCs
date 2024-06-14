@@ -1,6 +1,7 @@
 ﻿using LcBotCsWeb.Data.Interfaces;
 using LcBotCsWeb.Data.Models;
 using LcBotCsWeb.Data.Repositories;
+using MongoDB.Driver.Linq;
 
 namespace LcBotCsWeb.Data.Services;
 
@@ -39,7 +40,7 @@ public class DatabaseCache : ICache
 		if (_collection == null)
 			return null;
 
-		var result = (await _collection.Find(item => item.Key == key)).FirstOrDefault();
+		var result = await _collection.Query.FirstOrDefaultAsync(item => item.Key == key);
 
 		if (result == null)
 			return null;
