@@ -44,7 +44,7 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 		}
 
 		var psimUser = await _verification.GetVerifiedUserByDiscordId(id);
-		if (psimUser == null)
+		if (psimUser != null)
 		{
 			await user.AddRoleAsync(config.RoleId);
 			await RespondAsync("You have already linked a Pokémon Showdown account to your Discord account.", null, false, true);

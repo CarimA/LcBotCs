@@ -26,7 +26,8 @@ public class VerificationService
 			return null;
 		}
 
-		var result = await _database.VerificationCodes.Query.FirstOrDefaultAsync(code => acc.Any(a => a.AltId == code.PsimUser));
+		var ids = acc.Select(alt => alt.AltId);
+		var result = await _database.VerificationCodes.Query.FirstOrDefaultAsync(code => ids.Contains(code.PsimUser));
 
 		if (await IsVerificationCodeNullOrExpired(result))
 		{
@@ -87,7 +88,8 @@ public class VerificationService
 		if (alts == null)
 			return false;
 
-		return await _database.AccountLinks.Query.AnyAsync(accountLink => alts.Any(alt => alt.AltId == accountLink.PsimUser));
+		var ids = alts.Select(alt => alt.AltId);
+		return await _database.AccountLinks.Query.AnyAsync(accountLink => ids.Contains(accountLink.PsimUser));
 	}
 
 	public async Task<VerificationCodeItem?> MatchCode(string code)
