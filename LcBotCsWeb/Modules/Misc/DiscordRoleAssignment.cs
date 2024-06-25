@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 
 namespace LcBotCsWeb.Modules.Misc;
 
@@ -20,23 +21,40 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		await _discord.Interaction.RegisterCommandsToGuildAsync(LcDiscord);
 	}
 
-	[SlashCommand("matches", "Toggle the Matches role")]
-	public async Task ToggleMatchesRole()
+	private async Task ToggleRole(ulong role, string roleAssigned, string roleRemoved)
 	{
 		if (Context.Interaction.User is not IGuildUser { GuildId: LcDiscord } user)
 			return;
 
-		if (user.RoleIds.Contains(MatchesRole))
+		var roleInfo = user.Guild.GetRole(role);
+
+		if (roleInfo == null)
 		{
-			Console.WriteLine($"Matches role removed from {user.DisplayName}");
+			Console.WriteLine($"Warning: {role} was attempted to used but it did not exist on this guild.");
+			return;
+		}
+
+		var roleName = roleInfo.Name;
+
+		if (user.RoleIds.Contains(role))
+		{
+			Console.WriteLine($"{roleName} role removed from {user.DisplayName}");
 			await user.RemoveRoleAsync(MatchesRole);
-			await RespondAsync("You have been unassigned the matches role and will no longer be notified of tournament matches.", null, false, true);
+			await RespondAsync(roleRemoved, null, false, true);
 		}
 		else
 		{
-			Console.WriteLine($"Matches role assigned to {user.DisplayName}");
+			Console.WriteLine($"{roleName} role assigned to {user.DisplayName}");
 			await user.AddRoleAsync(MatchesRole);
-			await RespondAsync("You have been assigned the matches role and will be notified of tournament matches.", null, false, true);
+			await RespondAsync(roleAssigned, null, false, true);
 		}
+	}
+
+	[SlashCommand("matches", "Toggle the Matches role")]
+	public async Task ToggleMatchesRole()
+	{
+		await ToggleRole(MatchesRole,
+			"You have been assigned the matches role and will be notified of tournament matches.",
+			"You have been unassigned the matches role and will no longer be notified of tournament matches.");
 	}
 }
