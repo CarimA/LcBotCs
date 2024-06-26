@@ -40,7 +40,7 @@ public class ViabilityRankingsCommand : ICommand
 			if (rankings != null)
 				results.AddRange(rankings);
 		}
-		catch (HttpRequestException _)
+		catch (HttpRequestException)
 		{
 			await respond.SendHtml(CommandTarget.Context, "viability-rankings", "There was an error handling your request. Try again later.");
 		}

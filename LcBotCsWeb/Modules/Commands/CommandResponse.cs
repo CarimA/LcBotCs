@@ -8,7 +8,6 @@ public class CommandResponse
 	private readonly Room? _room;
 	private readonly bool _isPrivate;
 
-
 	public CommandResponse(PsimUsername user, Room? room, bool isPrivate)
 	{
 		_user = user;
@@ -17,7 +16,11 @@ public class CommandResponse
 	}
 
 	private async Task SendPrivate(string message) => await _user.Send(message);
-	private async Task SendPublic(string message) => await _room?.Send(message);
+	private async Task SendPublic(string message)
+	{
+		if (_room != null)
+			await _room.Send(message);
+	}
 
 	private async Task SendContext(string privateMsg, string publicMsg)
 	{

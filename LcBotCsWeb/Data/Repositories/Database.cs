@@ -1,16 +1,21 @@
 ﻿using LcBotCsWeb.Data.Models;
+using LcBotCsWeb.Modules.AltTracking;
+using LcBotCsWeb.Modules.PsimDiscordLink;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
 using MongoDB.Bson.Serialization.Serializers;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
-using System.Diagnostics;
 
 namespace LcBotCsWeb.Data.Repositories;
 
 public class Database
 {
-	public Repository<DatabaseObjectWrapper<CachedItem>>? Cache { get; }
+	private readonly IMongoDatabase _database;
+	public Repository<CachedItem>? Cache { get; }
+	public Repository<AccountLinkItem> AccountLinks { get; }
+	public Repository<VerificationCodeItem> VerificationCodes { get; }
+	public Repository<PsimAlt> Alts { get; }
 
 	public Database(DatabaseOptions options)
 	{
@@ -26,19 +31,28 @@ public class Database
 		try
 		{
 			var result = client.GetDatabase("admin").RunCommand<BsonDocument>(new BsonDocument("ping", 1));
-			Debug.Print("Successfully connected to Mongodb");
+			Console.WriteLine("Successfully connected to Mongodb");
 
-			var database = client.GetDatabase(options.DatabaseName);
+			_database = client.GetDatabase(options.DatabaseName);
 
 			if (!string.IsNullOrWhiteSpace(options.CacheCollectionName))
 			{
-				Cache = new Repository<DatabaseObjectWrapper<CachedItem>>(database.GetCollection<DatabaseObjectWrapper<CachedItem>>(options.CacheCollectionName));
+				Cache = GetCollection<CachedItem>(options.CacheCollectionName);
 			}
+
+			AccountLinks = GetCollection<AccountLinkItem>("account-link");
+			VerificationCodes = GetCollection<VerificationCodeItem>("verification-codes");
+			Alts = GetCollection<PsimAlt>("alts");
 		}
 		catch (Exception ex)
 		{
-			Debug.Print(ex.Message);
+			Console.WriteLine(ex.Message);
 			throw;
 		}
+	}
+
+	private Repository<T> GetCollection<T>(string collection) where T : DatabaseObject
+	{
+		return new Repository<T>(_database.GetCollection<T>(collection));
 	}
 }

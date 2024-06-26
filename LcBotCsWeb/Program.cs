@@ -4,7 +4,10 @@ using LcBotCsWeb.Data.Interfaces;
 using LcBotCsWeb.Data.Models;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Data.Services;
+using LcBotCsWeb.Modules.AltTracking;
+using LcBotCsWeb.Modules.Bridge;
 using LcBotCsWeb.Modules.Commands;
+using LcBotCsWeb.Modules.PsimDiscordLink;
 using LcBotCsWeb.Modules.SampleTeams;
 using LcBotCsWeb.Modules.Startup;
 using LcBotCsWeb.Modules.ViabilityRankings;
@@ -14,55 +17,93 @@ using PsimCsLib.PubSub;
 
 Env.Load();
 
-string GetEnvVar(string key, string container)
-{
-	return Environment.GetEnvironmentVariable(key) ?? throw new EnvVariableNotFoundException($"{key} not found", container);
-}
-
 var builder = WebApplication.CreateBuilder(args);
-
-builder.Services.AddSingleton<IHostedService, RoomBotService>();
-builder.Services.AddSingleton<PsimClient>();
-builder.Services.AddSingleton(new PsimClientOptions()
-{
-	Username = GetEnvVar("PSIM_USERNAME", nameof(PsimClientOptions)),
-	Password = GetEnvVar("PSIM_PASSWORD", nameof(PsimClientOptions))
-});
-
 var cache = Environment.GetEnvironmentVariable("DATABASE_CACHE_COLLECTION");
-
-builder.Services.AddSingleton<Database>();
-builder.Services.AddSingleton(new DatabaseOptions()
-{
-	ConnectionString = GetEnvVar("MONGODB_CONNECTION_STRING", nameof(DatabaseOptions)),
-	DatabaseName = GetEnvVar("DATABASE_NAME", nameof(DatabaseOptions)),
-	CacheCollectionName = cache
-});
 
 if (string.IsNullOrEmpty(cache))
 	builder.Services.AddSingleton<ICache, MemoryCache>();
 else
 	builder.Services.AddSingleton<ICache, HybridCache>();
 
-// Register bot modules
-builder.Services.AddSingleton<ISubscriber, CommandService>();
-builder.Services.AddSingleton(new CommandOptions()
+void AddHostedService<T>() where T : class, IHostedService
 {
-	CommandString = GetEnvVar("COMMAND_PREFIX", nameof(CommandOptions))
+	builder.Services.AddHostedService<T>().AddSingleton(x => x.GetServices<IHostedService>().OfType<T>().First());
+}
+
+void AddInstance<T>(T instance, bool activate = true) where T : class
+{
+	var service = builder.Services.AddSingleton(instance);
+	if (activate) service.ActivateSingleton<T>();
+}
+
+void AddConfig<T>(string key) where T : class
+{
+	AddInstance(Utils.GetEnvConfig<T>(key, nameof(T)));
+}
+
+void AddService<T>(bool activate = true) where T : class
+{
+	var service = builder.Services.AddSingleton<T>();
+	if (activate) service.ActivateSingleton<T>();
+}
+
+void AddPsimCommand<T>(bool activate = true) where T : class, ICommand
+{
+	builder.Services.AddSingleton<T>();
+	var service = builder.Services.AddSingleton<ICommand, T>();
+	if (activate) service.ActivateSingleton<T>();
+}
+
+void AddPsimService<T>(bool activate = true) where T : class, ISubscriber
+{
+	builder.Services.AddSingleton<T>();
+	var service = builder.Services.AddSingleton<ISubscriber, T>();
+	if (activate) service.ActivateSingleton<T>();
+}
+
+// hosted services are things persistently running in the background - if at any point they stop working, the whole program must shut down
+AddHostedService<PsimBotService>();
+AddHostedService<DiscordBotService>();
+
+AddConfig<BridgeOptions>("BRIDGE_CONFIG");
+AddConfig<DiscordBotOptions>("DISCORD_CONFIG");
+
+// todo: migrate these to the generic config
+AddInstance(new CommandOptions { CommandString = Utils.GetEnvVar("COMMAND_PREFIX", nameof(CommandOptions)) });
+AddInstance(new StartupOptions(Utils.GetEnvVar("PSIM_AVATAR", nameof(StartupOptions)), Utils.GetEnvVar("PSIM_ROOMS", nameof(StartupOptions))));
+AddInstance(new DatabaseOptions
+{
+	ConnectionString = Utils.GetEnvVar("MONGODB_CONNECTION_STRING", nameof(DatabaseOptions)),
+	DatabaseName = Utils.GetEnvVar("DATABASE_NAME", nameof(DatabaseOptions)),
+	CacheCollectionName = cache
+});
+AddInstance(new PsimClientOptions
+{
+	Username = Utils.GetEnvVar("PSIM_USERNAME", nameof(PsimClientOptions)),
+	Password = Utils.GetEnvVar("PSIM_PASSWORD", nameof(PsimClientOptions))
 });
 
-builder.Services.AddSingleton<ISubscriber, StartupModule>();
-builder.Services.AddSingleton(new StartupOptions(GetEnvVar("PSIM_AVATAR", nameof(StartupOptions)), GetEnvVar("PSIM_ROOMS", nameof(StartupOptions))));
+AddService<Database>();
+AddService<DiscordVerifyCommand>();
+AddService<VerificationService>();
+AddService<DiscordToPsimBridge>();
+AddService<DiscordLogger>();
+AddService<ViabilityRankingsService>();
+AddService<SampleTeamService>();
 
-builder.Services.AddSingleton<SampleTeamService>();
-builder.Services.AddSingleton<ICommand, SamplesCommand>();
+AddPsimCommand<ViabilityRankingsCommand>();
+AddPsimCommand<SamplesCommand>();
+AddPsimCommand<VerifyCommand>();
 
-builder.Services.AddSingleton<ViabilityRankingsService>();
-builder.Services.AddSingleton<ICommand, ViabilityRankingsCommand>();
+AddPsimService<CommandService>();
+AddPsimService<StartupModule>();
+AddPsimService<AltTrackingService>();
+AddPsimService<PsimToDiscordBridge>();
+AddPsimService<PunishmentTrackingService>();
 
 var app = builder.Build();
 
-app.UseStaticFiles(new StaticFileOptions()
+app.UseStaticFiles(new StaticFileOptions
 {
 	FileProvider = new PhysicalFileProvider(Path.Combine(AppContext.BaseDirectory, "Static")),
 	RequestPath = "/public"

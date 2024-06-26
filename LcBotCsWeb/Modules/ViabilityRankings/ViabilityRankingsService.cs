@@ -1,5 +1,5 @@
-﻿using System.Text.RegularExpressions;
-using LcBotCsWeb.Data.Interfaces;
+﻿using LcBotCsWeb.Data.Interfaces;
+using System.Text.RegularExpressions;
 
 namespace LcBotCsWeb.Modules.ViabilityRankings;
 
