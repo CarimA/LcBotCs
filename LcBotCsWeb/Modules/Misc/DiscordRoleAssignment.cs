@@ -64,10 +64,14 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 	[SlashCommand("baldcheck", "Check where on the Norwood Scale a user is")]
 	public async Task BaldCheck(SocketGuildUser user)
 	{
-		if (DateTime.UtcNow < _baldCheckCooldown)
-			await RespondAsync("On cooldown!", null, false, true);
+		if (_baldCheckCooldown != null && DateTime.UtcNow < _baldCheckCooldown)
+		{
+			var remainingTime = Math.Max(1, (_baldCheckCooldown - DateTime.UtcNow).Value.Minutes);
+			await RespondAsync($"On cooldown for about {remainingTime} minute{(remainingTime == 1 ? string.Empty : "s")}!", null, false, true);
+			return;
+		}
 
-		_baldCheckCooldown = DateTime.UtcNow + TimeSpan.FromSeconds(5);
+		_baldCheckCooldown = DateTime.UtcNow + TimeSpan.FromMinutes(10);
 
 		var id = user.Id;
 		var name = user.DisplayName;
@@ -75,25 +79,22 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		if (id is 295323609243844608 or 203660036092854272 or 199994947225649153 or 242299071472074753)
 		{
 			await RespondAsync("The scale has broken, try as you might there is no oasis to be found in this desert of missing follicles. @ is sadly bald.".Replace("@", name));
-			await Task.Delay(TimeSpan.FromSeconds(3));
-			await FollowupAsync("Condolences.");
-
 			return;
 		}
 
 		var results = new List<string>()
 		{
-			"Norwood 1, Looking good, @",
-			"Norwood 2, Pretty workable, @",
+			"Norwood 1, looking good, @",
+			"Norwood 2, pretty workable, @",
 			"Norwood 3, @ is starting to bald",
-			"Norwood 3 vertex, Uh oh, @",
-			"Norwood 4, Time to consider giving up @",
-			"Norwood 5, Baldness is approaching, @",
+			"Norwood 3 vertex, uh oh, @",
+			"Norwood 4, time to consider giving up @",
+			"Norwood 5, baldness is approaching, @",
 			"Norwood 6, @...",
 			"Norwood 7, you're basically bald at this point @"
 		};
 
-		var index = Math.Abs(id.GetHashCode() % results.Count);
+		var index = Math.Abs((id + (ulong)DateTime.UtcNow.Day).GetHashCode() % results.Count);
 		await RespondAsync(results[index].Replace("@", name));
 	}
 }
