@@ -133,7 +133,7 @@ public class DiscordToPsimBridge
 
 		foreach (var roomUser in roomUsers)
 		{
-			message = Regex.Replace(message, @"\b{roomUser.DisplayName}\b",
+			message = Regex.Replace(message, "\b{roomUser.DisplayName}\b",
 				$"<span class=\"username\"><username>{roomUser.DisplayName}</username></span>");
 		}
 
