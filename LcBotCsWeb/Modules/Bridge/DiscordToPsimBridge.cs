@@ -3,16 +3,15 @@ using Discord.WebSocket;
 using Ganss.Xss;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
+using LcBotCsWeb.Modules.PsimDiscordLink;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
-using PsimCsLib.Models;
-using PsimCsLib.PubSub;
 using System.Text.RegularExpressions;
 
-namespace LcBotCsWeb.Modules.PsimDiscordLink;
+namespace LcBotCsWeb.Modules.Bridge;
 
-public class BridgeService : ISubscriber<ChatMessage>
+public class DiscordToPsimBridge
 {
 	private readonly Database _database;
 	private readonly DiscordBotService _discord;
@@ -20,10 +19,11 @@ public class BridgeService : ISubscriber<ChatMessage>
 	private readonly PsimBotService _psim;
 	private readonly AltTrackingService _altTracking;
 	private readonly VerificationService _verification;
+	private readonly PunishmentTrackingService _punishmentTracking;
 	private readonly HtmlSanitizer _sanitiser;
 
-	public BridgeService(Database database, DiscordBotService discord, BridgeOptions bridgeOptions, PsimBotService psim,
-		AltTrackingService altTracking, VerificationService verification)
+	public DiscordToPsimBridge(Database database, DiscordBotService discord, BridgeOptions bridgeOptions, PsimBotService psim,
+		AltTrackingService altTracking, VerificationService verification, PunishmentTrackingService punishmentTracking)
 	{
 		_database = database;
 		_discord = discord;
@@ -31,10 +31,11 @@ public class BridgeService : ISubscriber<ChatMessage>
 		_psim = psim;
 		_altTracking = altTracking;
 		_verification = verification;
+		_punishmentTracking = punishmentTracking;
 		_sanitiser = new HtmlSanitizer();
 		discord.Client.MessageReceived += ClientOnMessageReceived;
 	}
-	
+
 	private async Task ClientOnMessageReceived(SocketMessage msg)
 	{
 		if (msg.Author.Id == _discord.Client.CurrentUser.Id)
@@ -84,15 +85,17 @@ public class BridgeService : ISubscriber<ChatMessage>
 
 		var roomRank = userDetails.Rooms.TryGetValue(config.PsimRoom, out var rank) ? rank : Rank.Normal;
 
-		// if the user is globally locked or actively muted in the psim room, move on
-		if (userDetails.GlobalRank == Rank.Locked || (roomRank is Rank.Locked or Rank.Muted))
+		if (userDetails.GlobalRank == Rank.Locked || roomRank is Rank.Locked or Rank.Muted)
 		{
 			await msg.AddReactionAsync(new Emoji("❌"));
 			return;
 		}
 
-		// if the user is muted/banned but simply not online, move on
-
+		if (await _punishmentTracking.IsUserPunished(user.PsimUser))
+		{
+			await msg.AddReactionAsync(new Emoji("❌"));
+			return;
+		}
 
 		var globalRank = userDetails.GlobalRank;
 		var displayRank = (Rank)Math.Max((int)globalRank, (int)roomRank);
@@ -171,36 +174,5 @@ public class BridgeService : ISubscriber<ChatMessage>
 
 			return string.Empty;
 		};
-	}
-
-	public async Task HandleEvent(ChatMessage msg)
-	{
-		if (msg.User.DisplayName == Utils.GetEnvVar("PSIM_USERNAME", "PSIM_USERNAME"))
-			return;
-
-		if (msg.IsIntro)
-			return;
-
-		var message = msg.Message.Trim();
-
-		if (message.StartsWith('/') || message.StartsWith('!'))
-			return;
-
-		var config = _bridgeOptions.LinkedGuilds.FirstOrDefault(linkedGuild => string.Equals(linkedGuild.PsimRoom, msg.Room.Name, StringComparison.InvariantCultureIgnoreCase));
-
-		if (config == null)
-			return;
-
-		var name = $"{PsimUsername.FromRank(msg.User.Rank)}{msg.User.DisplayName}".Trim();
-		var output = $"**{name}:** {message}";
-
-		if (string.IsNullOrEmpty(output))
-			return;
-
-		var guild = _discord.Client.Guilds.FirstOrDefault(g => g.Id == config.GuildId);
-		if (guild?.Channels.FirstOrDefault(c => c.Id == config.BridgeRoom) is not ITextChannel channel)
-			return;
-
-		await channel.SendMessageAsync(output);
 	}
 }

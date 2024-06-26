@@ -1,13 +1,13 @@
+using Discord;
 using System.Diagnostics;
 using System.Text;
-using Discord;
 
 namespace LcBotCsWeb;
 
 public class DiscordLogger : TextWriter
 {
 	private readonly DiscordBotService _discord;
-	
+
 	private const ulong LogChannel = 1251118371035021352;
 
 	public DiscordLogger(DiscordBotService discord)

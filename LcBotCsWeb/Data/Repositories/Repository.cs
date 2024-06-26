@@ -47,7 +47,7 @@ public class Repository<T> where T : DatabaseObject
 	{
 		return _collection.Find(_ => true).ToAsyncEnumerable();
 	}
-	
+
 	private static FilterDefinition<T>? MatchById(T item)
 	{
 		return Builders<T>.Filter.Eq(r => r.Id, item.Id);

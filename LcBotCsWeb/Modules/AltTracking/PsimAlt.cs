@@ -9,6 +9,7 @@ public class PsimAlt : DatabaseObject, IEquatable<PsimAlt>
 	public string PsimDisplayName { get; set; }
 	public bool IsActive { get; set; }
 	public ObjectId AltId { get; set; }
+	public DateTime? ActivePunishment { get; set; }
 
 	public bool Equals(PsimAlt? other)
 	{

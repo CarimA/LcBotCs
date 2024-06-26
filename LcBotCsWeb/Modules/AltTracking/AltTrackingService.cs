@@ -79,7 +79,7 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 		 */
 
 		var matchingToken = await _database.Alts.Query.Where(alt => alt.PsimId == username.Token || alt.PsimId == id).ToListAsync();
-		
+
 		if (matchingToken.Count == 0)
 			return;
 
@@ -90,7 +90,7 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 
 		var matchingUsers = await _database.Alts.Query.Where(alt => altIds.Contains(alt.AltId)).ToListAsync();
 
-		if (matchingUsers.Count == 0) 
+		if (matchingUsers.Count == 0)
 			return;
 
 		var firstId = altIds.FirstOrDefault();

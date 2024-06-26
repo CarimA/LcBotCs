@@ -33,7 +33,7 @@ public class DiscordBotService : BackgroundService
 	{
 		await Interaction.AddModulesAsync(Assembly.GetEntryAssembly(), _serviceProvider);
 	}
-	
+
 	private async Task ClientOnInteractionCreated(SocketInteraction interaction)
 	{
 		var scope = _serviceProvider.CreateScope();
