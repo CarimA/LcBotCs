@@ -133,12 +133,8 @@ public class DiscordToPsimBridge
 
 		foreach (var roomUser in roomUsers)
 		{
-			message = message.Replace($" {roomUser.DisplayName}",
-				$" <span class=\"username\"><username>{roomUser.DisplayName}</username></span>",
-				StringComparison.InvariantCultureIgnoreCase);
-			message = message.Replace($"{roomUser.DisplayName} ",
-				$"<span class=\"username\"><username>{roomUser.DisplayName}</username></span> ",
-				StringComparison.InvariantCultureIgnoreCase);
+			message = Regex.Replace(message, @"\b{roomUser.DisplayName}\b",
+				$"<span class=\"username\"><username>{roomUser.DisplayName}</username></span>");
 		}
 
 		if (string.IsNullOrEmpty(message))
