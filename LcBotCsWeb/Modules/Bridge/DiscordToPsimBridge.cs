@@ -63,7 +63,7 @@ public class DiscordToPsimBridge
 		// if the user has not linked their psim account, move on
 		if (user == null)
 		{
-			await msg.AddReactionAsync(new Emoji("❌"));
+			await msg.AddReactionAsync(new Emoji("⁉️"));
 			return;
 		}
 
@@ -71,24 +71,22 @@ public class DiscordToPsimBridge
 
 		if (psimUser == null)
 		{
-			await msg.AddReactionAsync(new Emoji("❌"));
+			await msg.AddReactionAsync(new Emoji("⁉️"));
 			return;
 		}
 
 		var userDetails = await _psim.Client.GetUserDetails(psimUser.PsimId, TimeSpan.FromSeconds(2));
+		var roomRank = Rank.Normal;
 
-		if (userDetails == null)
+		if (userDetails != null)
 		{
-			await msg.AddReactionAsync(new Emoji("❌"));
-			return;
-		}
+			roomRank = userDetails.Rooms.TryGetValue(config.PsimRoom, out var rank) ? rank : Rank.Normal;
 
-		var roomRank = userDetails.Rooms.TryGetValue(config.PsimRoom, out var rank) ? rank : Rank.Normal;
-
-		if (userDetails.GlobalRank == Rank.Locked || roomRank is Rank.Locked or Rank.Muted)
-		{
-			await msg.AddReactionAsync(new Emoji("❌"));
-			return;
+			if (userDetails.GlobalRank == Rank.Locked || roomRank is Rank.Locked or Rank.Muted)
+			{
+				await msg.AddReactionAsync(new Emoji("❌"));
+				return;
+			}
 		}
 
 		if (await _punishmentTracking.IsUserPunished(user.PsimUser))
