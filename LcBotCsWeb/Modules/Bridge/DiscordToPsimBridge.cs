@@ -67,8 +67,7 @@ public class DiscordToPsimBridge
 			return;
 		}
 
-		var psimUsers = await _altTracking.GetUser(user.PsimUser);
-		var psimUser = psimUsers.FirstOrDefault(user => user.IsActive) ?? psimUsers.FirstOrDefault();
+		var psimUser = (await _altTracking.GetUser(user.PsimUser))?.FirstOrDefault();
 
 		if (psimUser == null)
 		{
