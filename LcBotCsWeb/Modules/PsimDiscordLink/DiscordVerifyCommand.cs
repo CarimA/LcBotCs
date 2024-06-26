@@ -63,7 +63,7 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 		await _verification.Verify(id, result);
 		await user.AddRoleAsync(config.RoleId);
 		var alts = await _altTracking.GetActiveUser(result.PsimUser);
-		await RespondAsync($"{alts?.PsimDisplayName} on Pokémon Showdown have been linked to your Discord account!", null, false, true);
+		await RespondAsync($"{alts?.PsimDisplayName} on Pokémon Showdown has been linked to your Discord account!", null, false, true);
 		Console.WriteLine($"{alts?.PsimId} has connected their Showdown account to {user.DisplayName}");
 	}
 }
