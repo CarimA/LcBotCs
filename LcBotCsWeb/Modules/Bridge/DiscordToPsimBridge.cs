@@ -43,22 +43,18 @@ public class DiscordToPsimBridge
 
 		if (msg.Channel is not ITextChannel channel)
 			return;
-
-		var guildId = channel.GuildId;
-		var config = _bridgeOptions.LinkedGuilds.FirstOrDefault(linkedGuild => linkedGuild.GuildId == guildId);
+		
+		var config = _bridgeOptions.LinkedGuilds.FirstOrDefault(linkedGuild => linkedGuild.GuildId == channel.GuildId);
 
 		// if the current discord server doesn't support bridge, move on
 		if (config == null)
 			return;
 
-		var channelId = channel.Id;
-
 		// if this isn't a message in the bridge channel, move on
-		if (config.BridgeRoom != channelId)
+		if (config.BridgeRoom != channel.Id)
 			return;
-
-		var userId = msg.Author.Id;
-		var user = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == userId);
+		
+		var user = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == msg.Author.Id);
 
 		// if the user has not linked their psim account, move on
 		if (user == null)
@@ -94,14 +90,27 @@ public class DiscordToPsimBridge
 			await msg.AddReactionAsync(new Emoji("❌"));
 			return;
 		}
-
-		var globalRank = userDetails.GlobalRank;
-		var displayRank = (Rank)Math.Max((int)globalRank, (int)roomRank);
-
+		
+		var displayRank = (Rank)Math.Max((int)(userDetails?.GlobalRank ?? Rank.Normal), (int)roomRank);
 		var psimRank = PsimUsername.FromRank(displayRank).Trim();
-		var psimName = $"{psimUser.PsimDisplayName}";
-		var message = msg.Content.Replace("\n", ". ").Trim();
+		
+		var lines = msg.Content.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
+		if (lines.Length > 16)
+		{
+			await msg.AddReactionAsync(new Emoji("❌"));
+			return;
+		}
+
+		for (var i = 0; i < lines.Length; i++)
+		{
+			var line = lines[i];
+			await SendLine(line, msg, config.PsimRoom, channel, psimRank, psimUser.PsimDisplayName, config.DiscordInviteUrl, i);
+		}
+	}
+
+	private async Task SendLine(string message, SocketMessage msg, string psimRoom, ITextChannel channel, string psimRank, string psimName, string inviteUrl, int index)
+	{
 		if (message.ToLowerInvariant().Contains("discord.gg"))
 		{
 			await msg.AddReactionAsync(new Emoji("❌"));
@@ -119,30 +128,29 @@ public class DiscordToPsimBridge
 
 		// remember that everything after here is going to be sanitised
 
+		// replace markdown
 		message = Regex.Replace(message, "\\*\\*(.*?)\\*\\*", "<strong>$1</strong>");
 		message = Regex.Replace(message, "__(.*?)__", "<u>$1</u>");
 		message = Regex.Replace(message, "\\*(.*?)\\*", "<em>$1</em>");
 		message = Regex.Replace(message, "~~(.*?)~~", "<s>$1</s>");
 
+		// replace emoji with embedded image
+		message = await message.ReplaceAsync(new Regex("&lt;:(\\w+):([0-9]+)&gt;", RegexOptions.Singleline), RegexEmote(channel));
+
 		// replace mentions with psim names
 		message = await message.ReplaceAsync(new Regex("&lt;@!*&*([0-9]+)&gt;", RegexOptions.Singleline), RegexGetPsimName(channel));
+		var roomUsers = _psim.Client.Rooms[psimRoom].Users.OrderByDescending(u => u.DisplayName.Length);
 
-		var roomUsers = _psim.Client.Rooms[config.PsimRoom].Users.OrderByDescending(u => u.DisplayName.Length);
-
-		foreach (var roomUser in roomUsers)
-		{
-			message = Regex.Replace(message, $@"\b{roomUser.DisplayName}\b",
-				$"<span class=\"username\"><username>{roomUser.DisplayName}</username></span>",
-				RegexOptions.IgnoreCase);
-		}
+		// replace psim names with username references
+		message = roomUsers.Aggregate(message, (current, roomUser) => Regex.Replace(current, $@"\b{roomUser.DisplayName}\b", $"<span class=\"username\"><username>{roomUser.DisplayName}</username></span>", RegexOptions.IgnoreCase));
 
 		if (string.IsNullOrEmpty(message))
 			return;
 
-		var psimId = $"discord-{msg.Id}";
+		var psimId = $"discord-{msg.Id}-{index}";
 		var output =
-			$"/adduhtml {psimId},<strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span> <small>[<a href=\"{config.DiscordInviteUrl}\">via Bridge</a>]</small>:</strong> <em>{message}</em>";
-		await _psim.Client.Rooms[config.PsimRoom].Send(output);
+			$"/adduhtml {psimId},<strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span> <small>[<a href=\"{inviteUrl}\">via Bridge</a>]</small>:</strong> <em>{message}</em>";
+		await _psim.Client.Rooms[psimRoom].Send(output);
 	}
 
 	private Func<Match, Task<string>> RegexGetPsimName(ITextChannel channel)
@@ -168,6 +176,25 @@ public class DiscordToPsimBridge
 			}
 
 			return string.Empty;
+		};
+	}
+
+	private Func<Match, Task<string>> RegexEmote(ITextChannel channel)
+	{
+		return (match) =>
+		{
+			try
+			{
+				var name = match.Groups[1].Value;
+				var emoteId = match.Groups[2].Value;
+				var field = $"<:{name}:{emoteId}>";
+
+				return Task.FromResult(Emote.TryParse(field, out var emote) ? $"<img src=\"{emote.Url}\" width=\"16\" height=\"16\" \\>" : string.Empty);
+			}
+			catch
+			{
+				return Task.FromResult(string.Empty);
+			}
 		};
 	}
 }
