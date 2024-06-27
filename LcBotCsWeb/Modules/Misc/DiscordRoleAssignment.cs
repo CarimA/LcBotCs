@@ -123,7 +123,7 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 			return;
 		}
 
-		var alts = await _database.Alts.Query.Where(alt => alt.PsimDisplayName == psimName).ToListAsync();
+		var alts = await _database.Alts.Query.Where(alt => alt.PsimId == psimName).ToListAsync();
 
 		if (alts == null || alts.Count == 0)
 		{
