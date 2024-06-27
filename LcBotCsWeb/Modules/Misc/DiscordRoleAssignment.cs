@@ -106,8 +106,7 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 	[SlashCommand("hotfix", "Administrative command")]
 	public async Task HotfixAccountLink(SocketGuildUser user, string psimName)
 	{
-		var id = user.Id;
-		if (id != 104711168601415680)
+		if (Context.User.Id != 104711168601415680)
 		{
 			await RespondAsync("You do not have permission to use this command.", null, false, true);
 			return;
@@ -115,6 +114,7 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 
 		await DeferAsync(true);
 
+		var id = user.Id;
 		var accountLinks = await _database.AccountLinks.Query.Where(link => link.DiscordId == id).ToListAsync();
 
 		if (accountLinks == null || accountLinks.Count == 0)
