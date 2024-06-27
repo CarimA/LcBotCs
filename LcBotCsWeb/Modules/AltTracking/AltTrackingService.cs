@@ -107,9 +107,19 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 
 			if (changed)
 			{
+				var accountLink = await _database.AccountLinks.Query.Where(link => link.PsimUser == user.AltId)
+					.ToListAsync();
+
 				didSomethingChange = true;
 				user.IsActive = newActive;
 				user.AltId = firstId;
+
+				foreach (var link in accountLink)
+				{
+					link.PsimUser = firstId;
+					await _database.AccountLinks.Update(link);
+				}
+
 				await _database.Alts.Update(user);
 			}
 		}
