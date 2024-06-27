@@ -59,6 +59,7 @@ public class DiscordToPsimBridge
 		// if the user has not linked their psim account, move on
 		if (user == null)
 		{
+			Console.WriteLine($"Failed to send bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because they do not have a linked account");
 			await msg.AddReactionAsync(new Emoji("⁉️"));
 			return;
 		}
@@ -67,6 +68,7 @@ public class DiscordToPsimBridge
 
 		if (psimUser == null)
 		{
+			Console.WriteLine($"Failed to send bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) with account link {user.PsimUser} because they do not have an associated PS account (hanging reference)");
 			await msg.AddReactionAsync(new Emoji("⁉️"));
 			return;
 		}
@@ -80,6 +82,8 @@ public class DiscordToPsimBridge
 
 			if (userDetails.GlobalRank == Rank.Locked || roomRank is Rank.Locked or Rank.Muted)
 			{
+				Console.WriteLine(
+					$"Failed to send bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because they are actively locked/muted");
 				await msg.AddReactionAsync(new Emoji("❌"));
 				return;
 			}
@@ -87,17 +91,29 @@ public class DiscordToPsimBridge
 
 		if (await _punishmentTracking.IsUserPunished(user.PsimUser))
 		{
+			Console.WriteLine(
+				$"Failed to send bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because they are actively muted/banned");
 			await msg.AddReactionAsync(new Emoji("❌"));
 			return;
 		}
 		
 		var displayRank = (Rank)Math.Max((int)(userDetails?.GlobalRank ?? Rank.Normal), (int)roomRank);
 		var psimRank = PsimUsername.FromRank(displayRank).Trim();
-		
+
+		if (msg.Content.ToLowerInvariant().Contains("discord.gg"))
+		{
+			Console.WriteLine(
+				$"Failed to send bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because it contained a link to a discord server");
+			await msg.AddReactionAsync(new Emoji("❌"));
+			return;
+		}
+
 		var lines = msg.Content.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
 		if (lines.Length > 16)
 		{
+			Console.WriteLine(
+				$"Failed to send bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because the message was too long");
 			await msg.AddReactionAsync(new Emoji("❌"));
 			return;
 		}
@@ -111,12 +127,6 @@ public class DiscordToPsimBridge
 
 	private async Task SendLine(string message, SocketMessage msg, string psimRoom, ITextChannel channel, string psimRank, string psimName, string inviteUrl, int index)
 	{
-		if (message.ToLowerInvariant().Contains("discord.gg"))
-		{
-			await msg.AddReactionAsync(new Emoji("❌"));
-			return;
-		}
-
 		try
 		{
 			message = _sanitiser.Sanitize(message);
@@ -151,6 +161,7 @@ public class DiscordToPsimBridge
 		var output =
 			$"/adduhtml {psimId},<strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span> <small>[<a href=\"{inviteUrl}\">via Bridge</a>]</small>:</strong> <em>{message}</em>";
 		await _psim.Client.Rooms[psimRoom].Send(output);
+		Console.WriteLine($"Sent {msg.Id} bridge message for {msg.Author.Username} (ID: {msg.Author.Id})");
 	}
 
 	private Func<Match, Task<string>> RegexGetPsimName(ITextChannel channel)
