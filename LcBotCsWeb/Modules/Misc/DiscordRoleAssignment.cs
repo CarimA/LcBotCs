@@ -1,6 +1,9 @@
 ﻿using Discord;
 using Discord.Interactions;
 using Discord.WebSocket;
+using LcBotCsWeb.Data.Repositories;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 
 namespace LcBotCsWeb.Modules.Misc;
 
@@ -9,10 +12,12 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 	private const ulong LcDiscord = 231275118700003328;
 	private const ulong MatchesRole = 400043115689541632;
 	private readonly DiscordBotService _discord;
+	private readonly Database _database;
 
-	public DiscordRoleAssignment(DiscordBotService discord)
+	public DiscordRoleAssignment(DiscordBotService discord, Database database)
 	{
 		_discord = discord;
+		_database = database;
 		discord.Client.Ready += ClientOnReady;
 	}
 
@@ -30,7 +35,7 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 
 		if (roleInfo == null)
 		{
-			Console.WriteLine($"Warning: {role} was attempted to used but it did not exist on this guild.");
+			Console.WriteLine($"Warning: {role} was attempted to be used but it did not exist on this guild.");
 			return;
 		}
 
@@ -96,5 +101,44 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 
 		var index = Math.Abs((id + (ulong)DateTime.UtcNow.Day).GetHashCode() % results.Count);
 		await RespondAsync(results[index].Replace("@", name));
+	}
+
+	[SlashCommand("hotfix", "Administrative command")]
+	public async Task HotfixAccountLink(SocketGuildUser user, string psimName)
+	{
+		var id = user.Id;
+		if (id != 104711168601415680)
+		{
+			await RespondAsync("You do not have permission to use this command.", null, false, true);
+			return;
+		}
+
+		await DeferAsync(true);
+
+		var accountLinks = await _database.AccountLinks.Query.Where(link => link.DiscordId == id).ToListAsync();
+
+		if (accountLinks == null || accountLinks.Count == 0)
+		{
+			await FollowupAsync("This user does not have an associated account link", null, false, true);
+			return;
+		}
+
+		var alts = await _database.Alts.Query.Where(alt => alt.PsimDisplayName == psimName).ToListAsync();
+
+		if (alts == null || alts.Count == 0)
+		{
+			await FollowupAsync("This PS username has not been registered", null, false, true);
+			return;
+		}
+
+		var altId = alts.First().AltId;
+
+		foreach (var accountLink in accountLinks)
+		{
+			accountLink.PsimUser = altId;
+			await _database.AccountLinks.Update(accountLink);
+		}
+
+		await FollowupAsync("Successfully updated user.", null, false, true);
 	}
 }
