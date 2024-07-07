@@ -142,6 +142,24 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 			.ToListAsync();
 	}
 
+	public async Task<List<PsimAlt>?> GetUser(ulong discordId)
+	{
+		var links = await _database.AccountLinks.Query
+			.Where(link => link.DiscordId == discordId)
+			.ToListAsync();
+
+		var output = new List<PsimAlt>();
+		foreach (var link in links)
+		{
+			var id = link.PsimUser;
+			var alts = await _database.Alts.Query
+				.Where(alt => alt.AltId == id)
+				.ToListAsync();
+			output.AddRange(alts);
+		}
+		return output;
+	}
+
 	public async Task<PsimAlt?> GetActiveUser(ObjectId id)
 	{
 		return (await GetUser(id))?.FirstOrDefault(user => user.IsActive);

@@ -171,7 +171,7 @@ public class DiscordToPsimBridge
 			try
 			{
 				var id = ulong.Parse(match.Groups[1].Value);
-				var user = await _verification.GetVerifiedUserByDiscordId(id);
+				var user = (await _altTracking.GetUser(id))?.FirstOrDefault();
 
 				if (user != null)
 					return $"<span class=\"username\"><username>{user.PsimDisplayName}</username></span>";
