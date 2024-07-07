@@ -96,6 +96,7 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 		var firstId = altIds.FirstOrDefault();
 
 		var didSomethingChange = false;
+		var discordIds = new HashSet<ulong>();
 		foreach (var user in matchingUsers)
 		{
 			var oldActive = user.IsActive;
@@ -118,10 +119,18 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 				{
 					link.PsimUser = firstId;
 					await _database.AccountLinks.Update(link);
+					discordIds.Add(link.DiscordId);
 				}
 
 				await _database.Alts.Update(user);
 			}
+		}
+
+		if (discordIds.Count > 1)
+		{
+			var ids = discordIds.Select(discordId => $"<@{discordId}>");
+			Console.WriteLine("<@104711168601415680>");
+			Console.WriteLine($"WARNING: deduplicated the following alt accounts but they appear to belong to multiple unique users, indicating the possibility of account sharing, please inspect: {string.Join(", ", ids)}");
 		}
 
 		if (didSomethingChange)
