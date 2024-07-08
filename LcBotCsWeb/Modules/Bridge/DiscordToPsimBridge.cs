@@ -159,7 +159,7 @@ public class DiscordToPsimBridge
 
 		var psimId = $"discord-{msg.Id}-{index}";
 		var output =
-			$"/adduhtml {psimId},<strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span> <small>[<a href=\"{inviteUrl}\">via Bridge</a>]</small>:</strong> <em>{message}</em>";
+			$"/adduhtml {psimId},<strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span> <small>[<a href=\"{inviteUrl}\">via LC Discord</a>]</small>:</strong> <em>{message}</em>";
 		await _psim.Client.Rooms[psimRoom].Send(output);
 		Console.WriteLine($"Sent {msg.Id} bridge message for {msg.Author.Username} (ID: {msg.Author.Id})");
 	}
