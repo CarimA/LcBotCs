@@ -8,6 +8,7 @@ using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
 using System.Text.RegularExpressions;
+using System.Threading.Channels;
 
 namespace LcBotCsWeb.Modules.Bridge;
 
@@ -44,16 +45,24 @@ public class DiscordToPsimBridge
 		if (msg.Channel is not ITextChannel channel)
 			return;
 		
-		var config = _bridgeOptions.LinkedGuilds.FirstOrDefault(linkedGuild => linkedGuild.GuildId == channel.GuildId);
+		var configs = _bridgeOptions.LinkedGuilds.Where(linkedGuild => linkedGuild.GuildId == channel.GuildId);
 
 		// if the current discord server doesn't support bridge, move on
-		if (config == null)
+		if (configs == null)
 			return;
 
 		// if this isn't a message in the bridge channel, move on
+		foreach (var config in configs)
+		{
+			await MessageReceived(channel, config, msg);
+		}
+	}
+
+	private async Task MessageReceived(ITextChannel channel, PsimLinkedGuild config, SocketMessage msg)
+	{
 		if (config.BridgeRoom != channel.Id)
 			return;
-		
+
 		var user = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == msg.Author.Id);
 
 		// if the user has not linked their psim account, move on
@@ -96,7 +105,7 @@ public class DiscordToPsimBridge
 			await msg.AddReactionAsync(new Emoji("❌"));
 			return;
 		}
-		
+
 		var displayRank = (Rank)Math.Max((int)(userDetails?.GlobalRank ?? Rank.Normal), (int)roomRank);
 		var psimRank = PsimUsername.FromRank(displayRank).Trim();
 
