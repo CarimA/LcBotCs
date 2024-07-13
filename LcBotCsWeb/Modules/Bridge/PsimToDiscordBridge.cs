@@ -35,7 +35,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			return;
 
 		var name = $"{PsimUsername.FromRank(msg.User.Rank)}{msg.User.DisplayName}".Trim();
-		var output = $"**{name}:** {message}";
+		var output = $"**[{msg.Room}] {name}:** {message}";
 		if (string.IsNullOrEmpty(output))
 			return;
 
