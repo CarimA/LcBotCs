@@ -208,8 +208,12 @@ public class DiscordToPsimBridge
 				var name = match.Groups[1].Value;
 				var emoteId = match.Groups[2].Value;
 				var field = $"<:{name}:{emoteId}>";
+				var isEmote = Emote.TryParse(field, out var emote);
+				var isInternal = channel.Guild.Emotes.Contains(emote);
 
-				return Task.FromResult(Emote.TryParse(field, out var emote) ? $"<img src=\"{emote.Url}\" width=\"16\" height=\"16\" \\>" : string.Empty);
+				return Task.FromResult(isEmote && isInternal
+					? $"<img src=\"{emote.Url}\" width=\"16\" height=\"16\" \\>"
+					: string.Empty);
 			}
 			catch
 			{
