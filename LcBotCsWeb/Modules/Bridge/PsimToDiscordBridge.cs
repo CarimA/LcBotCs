@@ -60,7 +60,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		var displayRoom = isMultiRoom ? $"[{msg.Room.Name}] " : string.Empty;
 		var displayName = string.IsNullOrEmpty(discordId) ? name : $"<@{discordId}> ({name})";
 
-		var output = $"**{displayRoom}{displayName}**\n{message}";
+		var output = $"-# **{displayRoom}{displayName}**\n{message}";
 
 		if (string.IsNullOrEmpty(output))
 			return;
