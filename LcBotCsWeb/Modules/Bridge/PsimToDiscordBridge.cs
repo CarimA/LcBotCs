@@ -43,6 +43,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		if (config == null)
 			return;
 
+		var isMultiRoom = _bridgeOptions.LinkedGuilds.Count(linkedGuild => string.Equals(linkedGuild.PsimRoom, msg.Room.Name, StringComparison.InvariantCultureIgnoreCase)) > 1;
 		var name = $"{PsimUsername.FromRank(msg.User.Rank)}{msg.User.DisplayName}".Trim();
 		var psimUserId = (await _altTracking.GetUser(msg.User))?.FirstOrDefault().AltId;
 		var discordId = string.Empty;
@@ -56,8 +57,11 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			}
 		}
 
+		var displayRoom = isMultiRoom ? $"[{msg.Room.Name}] " : string.Empty;
 		var displayName = string.IsNullOrEmpty(discordId) ? name : $"<@{discordId}> ({name})";
-		var output = $"**[{msg.Room.Name}] {displayName}:** {message}";
+
+		var output = $"**{displayRoom}{displayName}**\n {message}";
+
 		if (string.IsNullOrEmpty(output))
 			return;
 
