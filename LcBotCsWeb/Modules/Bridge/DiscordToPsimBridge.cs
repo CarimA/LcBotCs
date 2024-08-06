@@ -19,19 +19,17 @@ public class DiscordToPsimBridge
 	private readonly BridgeOptions _bridgeOptions;
 	private readonly PsimBotService _psim;
 	private readonly AltTrackingService _altTracking;
-	private readonly VerificationService _verification;
 	private readonly PunishmentTrackingService _punishmentTracking;
 	private readonly HtmlSanitizer _sanitiser;
 
 	public DiscordToPsimBridge(Database database, DiscordBotService discord, BridgeOptions bridgeOptions, PsimBotService psim,
-		AltTrackingService altTracking, VerificationService verification, PunishmentTrackingService punishmentTracking)
+		AltTrackingService altTracking, PunishmentTrackingService punishmentTracking)
 	{
 		_database = database;
 		_discord = discord;
 		_bridgeOptions = bridgeOptions;
 		_psim = psim;
 		_altTracking = altTracking;
-		_verification = verification;
 		_punishmentTracking = punishmentTracking;
 		_sanitiser = new HtmlSanitizer();
 		discord.Client.MessageReceived += ClientOnMessageReceived;

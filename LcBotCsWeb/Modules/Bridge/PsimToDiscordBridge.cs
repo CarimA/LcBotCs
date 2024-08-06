@@ -1,4 +1,9 @@
-﻿using Discord;
+﻿using System.Runtime.InteropServices.ComTypes;
+using Discord;
+using LcBotCsWeb.Data.Repositories;
+using LcBotCsWeb.Modules.AltTracking;
+using MongoDB.Driver;
+using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
@@ -9,11 +14,15 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 {
 	private readonly DiscordBotService _discord;
 	private readonly BridgeOptions _bridgeOptions;
+	private readonly AltTrackingService _altTracking;
+	private readonly Database _db;
 
-	public PsimToDiscordBridge(DiscordBotService discord, BridgeOptions bridgeOptions)
+	public PsimToDiscordBridge(DiscordBotService discord, BridgeOptions bridgeOptions, AltTrackingService altTracking, Database db)
 	{
 		_discord = discord;
 		_bridgeOptions = bridgeOptions;
+		_altTracking = altTracking;
+		_db = db;
 	}
 
 	public async Task HandleEvent(ChatMessage msg)
@@ -35,7 +44,20 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			return;
 
 		var name = $"{PsimUsername.FromRank(msg.User.Rank)}{msg.User.DisplayName}".Trim();
-		var output = $"**[{msg.Room.Name}] {name}:** {message}";
+		var psimUserId = (await _altTracking.GetUser(msg.User))?.FirstOrDefault().AltId;
+		var discordId = string.Empty;
+
+		if (psimUserId != null)
+		{
+			var accountLink = await _db.AccountLinks.Query.FirstOrDefaultAsync(link => link.PsimUser == psimUserId);
+			if (accountLink != null)
+			{
+				discordId = $"{accountLink.DiscordId}";
+			}
+		}
+
+		var displayName = string.IsNullOrEmpty(discordId) ? name : $"<@{discordId}> ({name})";
+		var output = $"**[{msg.Room.Name}] {displayName}:** {message}";
 		if (string.IsNullOrEmpty(output))
 			return;
 
@@ -43,6 +65,6 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		if (guild?.Channels.FirstOrDefault(c => c.Id == config.BridgeRoom) is not ITextChannel channel)
 			return;
 
-		await channel.SendMessageAsync(output);
+		await channel.SendMessageAsync(output, allowedMentions: AllowedMentions.None);
 	}
 }
