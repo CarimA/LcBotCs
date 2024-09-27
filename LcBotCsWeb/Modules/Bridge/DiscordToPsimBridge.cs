@@ -127,49 +127,60 @@ public class DiscordToPsimBridge
 			return;
 		}
 
-		var reply = msg.Reference?.MessageId.Value;
-		if (reply != null && reply.HasValue)
+		try
 		{
-			var replyTo = await channel.GetMessageAsync(reply.Value);
-			var author = replyTo.Author;
-			var isSelf = author.Id == _discord.Client.CurrentUser.Id;
-
-			if (isSelf)
+			var reply = msg.Reference?.MessageId.Value;
+			if (reply != null && reply.HasValue)
 			{
-				// this must be from psim
-				var content = replyTo.CleanContent;
-				var lineSplit = content.Split("\n");
-				var split = lineSplit[0].Split(" - ", StringSplitOptions.TrimEntries);
-				var replyUser = (split.Length > 0 ? split[1] : lineSplit[0].Trim());
-				await SendPsimHtml(config.PsimRoom, $"reply-{msg.Id}",
-					$"<small>↱ reply to <strong><span class=\"username\">{replyUser}</span></strong>: {lineSplit[1]}</small>");
-			}
-			else
-			{
-				// this must be a discord user
-				var replyDiscordUser = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == author.Id);
-				var replyUser = (await _altTracking.GetUser(replyDiscordUser.PsimUser))?.FirstOrDefault();
+				var replyTo = await channel.GetMessageAsync(reply.Value);
+				var author = replyTo.Author;
+				var isSelf = author.Id == _discord.Client.CurrentUser.Id;
 
-				if (replyUser != null)
+				if (isSelf)
 				{
-					var replyMessage = await CleanMessage(replyTo.Content, channel, config.PsimRoom);
-
-					var replyUserDetails = await _psim.Client.GetUserDetails(replyUser.PsimId, TimeSpan.FromSeconds(2));
-					var replyRoomRank = replyUserDetails switch
-					{
-						null => Rank.Normal,
-						_ => replyUserDetails.Rooms.TryGetValue(config.PsimRoom, out var rank) ? rank : Rank.Normal
-					};
-
-					var replyDisplayRank = (Rank)Math.Max((int)(replyUserDetails?.GlobalRank ?? Rank.Normal),
-						(int)replyRoomRank);
-					var replyRank = PsimUsername.FromRank(replyDisplayRank).Trim();
+					// this must be from psim
+					var content = replyTo.CleanContent;
+					var lineSplit = content.Split("\n");
+					var split = lineSplit[0].Split(" - ", StringSplitOptions.TrimEntries);
+					var replyUser = (split.Length > 0 ? split[1] : lineSplit[0].Trim());
 					await SendPsimHtml(config.PsimRoom, $"reply-{msg.Id}",
-						$"<small>↱ reply to <strong><span class=\"username\">{replyRank}{replyUser.PsimDisplayName}</span></strong>: {replyMessage}</small>");
+						$"<small>↱ reply to <strong><span class=\"username\">{replyUser}</span></strong>: {lineSplit[1]}</small>");
+				}
+				else
+				{
+					// this must be a discord user
+					var replyDiscordUser =
+						await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink =>
+							accountLink.DiscordId == author.Id);
+					var replyUser = (await _altTracking.GetUser(replyDiscordUser.PsimUser))?.FirstOrDefault();
+
+					if (replyUser != null)
+					{
+						var replyMessage = await CleanMessage(replyTo.Content, channel, config.PsimRoom);
+
+						var replyUserDetails =
+							await _psim.Client.GetUserDetails(replyUser.PsimId, TimeSpan.FromSeconds(2));
+						var replyRoomRank = replyUserDetails switch
+						{
+							null => Rank.Normal,
+							_ => replyUserDetails.Rooms.TryGetValue(config.PsimRoom, out var rank) ? rank : Rank.Normal
+						};
+
+						var replyDisplayRank = (Rank)Math.Max((int)(replyUserDetails?.GlobalRank ?? Rank.Normal),
+							(int)replyRoomRank);
+						var replyRank = PsimUsername.FromRank(replyDisplayRank).Trim();
+						await SendPsimHtml(config.PsimRoom, $"reply-{msg.Id}",
+							$"<small>↱ reply to <strong><span class=\"username\">{replyRank}{replyUser.PsimDisplayName}</span></strong>: {replyMessage}</small>");
+					}
 				}
 			}
 		}
-		
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Failed to prepend a reply for {msg.GetJumpUrl()}");
+			Console.WriteLine(ex.Message);
+		}
+
 		for (var i = 0; i < lines.Length; i++)
 		{
 			var line = lines[i];
