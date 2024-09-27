@@ -154,7 +154,7 @@ public class DiscordToPsimBridge
 				{
 					var replyMessage = await CleanMessage(replyTo.Content, channel, config.PsimRoom);
 
-					var replyUserDetails = await _psim.Client.GetUserDetails(psimUser.PsimId, TimeSpan.FromSeconds(2));
+					var replyUserDetails = await _psim.Client.GetUserDetails(replyUser.PsimId, TimeSpan.FromSeconds(2));
 					var replyRoomRank = replyUserDetails switch
 					{
 						null => Rank.Normal,
