@@ -4,9 +4,12 @@ using Ganss.Xss;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
 using LcBotCsWeb.Modules.PsimDiscordLink;
+using MongoDB.Driver.Core.Bindings;
+using MongoDB.Driver.Core.WireProtocol.Messages;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
+using System;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 
@@ -81,19 +84,18 @@ public class DiscordToPsimBridge
 		}
 
 		var userDetails = await _psim.Client.GetUserDetails(psimUser.PsimId, TimeSpan.FromSeconds(2));
-		var roomRank = Rank.Normal;
-
-		if (userDetails != null)
+		var roomRank = userDetails switch
 		{
-			roomRank = userDetails.Rooms.TryGetValue(config.PsimRoom, out var rank) ? rank : Rank.Normal;
+			null => Rank.Normal,
+			_ => userDetails.Rooms.TryGetValue(config.PsimRoom, out var rank) ? rank : Rank.Normal
+		};
 
-			if (userDetails.GlobalRank == Rank.Locked || roomRank is Rank.Locked or Rank.Muted)
-			{
-				Console.WriteLine(
-					$"Failed to send bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because they are actively locked/muted");
-				await msg.AddReactionAsync(new Emoji("❌"));
-				return;
-			}
+		if (userDetails?.GlobalRank == Rank.Locked || roomRank is Rank.Locked or Rank.Muted)
+		{
+			Console.WriteLine(
+				$"Failed to send bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because they are actively locked/muted");
+			await msg.AddReactionAsync(new Emoji("❌"));
+			return;
 		}
 
 		if (await _punishmentTracking.IsUserPunished(user.PsimUser))
@@ -125,6 +127,49 @@ public class DiscordToPsimBridge
 			return;
 		}
 
+		var reply = msg.Reference?.MessageId.Value;
+		if (reply != null && reply.HasValue)
+		{
+			var replyTo = await channel.GetMessageAsync(reply.Value);
+			var author = replyTo.Author;
+			var isSelf = author.Id == _discord.Client.CurrentUser.Id;
+
+			if (isSelf)
+			{
+				// this must be from psim
+				var content = replyTo.CleanContent;
+				var lineSplit = content.Split("\n");
+				var split = lineSplit[0].Split(" - ");
+				var replyUser = (split.Length > 0 ? split[1] : split[0]).Trim();
+				await SendPsimHtml(config.PsimRoom, $"reply-{msg.Id}",
+					$"<small>↱ reply to <strong><span class=\"username\">{replyUser}</span></strong>: {lineSplit[1]}</small>");
+			}
+			else
+			{
+				// this must be a discord user
+				var replyDiscordUser = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == author.Id);
+				var replyUser = (await _altTracking.GetUser(replyDiscordUser.PsimUser))?.FirstOrDefault();
+
+				if (replyUser != null)
+				{
+					var replyMessage = await CleanMessage(replyTo.Content, channel, config.PsimRoom);
+
+					var replyUserDetails = await _psim.Client.GetUserDetails(psimUser.PsimId, TimeSpan.FromSeconds(2));
+					var replyRoomRank = replyUserDetails switch
+					{
+						null => Rank.Normal,
+						_ => replyUserDetails.Rooms.TryGetValue(config.PsimRoom, out var rank) ? rank : Rank.Normal
+					};
+
+					var replyDisplayRank = (Rank)Math.Max((int)(replyUserDetails?.GlobalRank ?? Rank.Normal),
+						(int)replyRoomRank);
+					var replyRank = PsimUsername.FromRank(replyDisplayRank).Trim();
+					await SendPsimHtml(config.PsimRoom, $"reply-{msg.Id}",
+						$"<small>↱ reply to <strong><span class=\"username\">{replyRank}{replyUser.PsimDisplayName}</span></strong>: {replyMessage}</small>");
+				}
+			}
+		}
+		
 		for (var i = 0; i < lines.Length; i++)
 		{
 			var line = lines[i];
@@ -134,6 +179,21 @@ public class DiscordToPsimBridge
 
 	private async Task SendLine(string message, SocketMessage msg, string psimRoom, ITextChannel channel, string psimRank, string psimName, string inviteUrl, int index)
 	{
+		message = await CleanMessage(message, channel, psimRoom);
+		if (string.IsNullOrEmpty(message))
+			return;
+
+		var psimId = $"discord-{msg.Id}-{index}";
+		var text = $"<strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span> <small>[<a href=\"{inviteUrl}\">via LC Discord</a>]</small>:</strong> <em>{message}</em>";
+		await SendPsimHtml(psimRoom, psimId, text);
+		Console.WriteLine($"Sent {msg.Id} bridge message for {msg.Author.Username} (ID: {msg.Author.Id})");
+	}
+
+	private async Task<string> CleanMessage(string message, ITextChannel channel, string psimRoom)
+	{
+		if (message.ToLowerInvariant().Contains("discord.gg"))
+			return string.Empty;
+
 		try
 		{
 			message = _sanitiser.Sanitize(message);
@@ -160,15 +220,14 @@ public class DiscordToPsimBridge
 
 		// replace psim names with username references
 		message = roomUsers.Aggregate(message, (current, roomUser) => Regex.Replace(current, $@"\b{roomUser.DisplayName}\b", $"<span class=\"username\"><username>{roomUser.DisplayName}</username></span>", RegexOptions.IgnoreCase));
+		return message;
 
-		if (string.IsNullOrEmpty(message))
-			return;
+	}
 
-		var psimId = $"discord-{msg.Id}-{index}";
-		var output =
-			$"/adduhtml {psimId},<strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span> <small>[<a href=\"{inviteUrl}\">via LC Discord</a>]</small>:</strong> <em>{message}</em>";
+	private async Task SendPsimHtml(string psimRoom, string id, string text)
+	{
+		var output = $"/adduhtml {id},{text}";
 		await _psim.Client.Rooms[psimRoom].Send(output);
-		Console.WriteLine($"Sent {msg.Id} bridge message for {msg.Author.Username} (ID: {msg.Author.Id})");
 	}
 
 	private Func<Match, Task<string>> RegexGetPsimName(ITextChannel channel)
