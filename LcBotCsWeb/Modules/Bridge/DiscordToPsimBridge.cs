@@ -12,6 +12,7 @@ using PsimCsLib.Enums;
 using System;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
+using static MongoDB.Driver.WriteConcern;
 
 namespace LcBotCsWeb.Modules.Bridge;
 
@@ -195,7 +196,7 @@ public class DiscordToPsimBridge
 			return;
 
 		var psimId = $"discord-{msg.Id}-{index}";
-		var text = $"<strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span> <small>[<a href=\"{inviteUrl}\">via LC Discord</a>]</small>:</strong> <em>{message}</em>";
+		var text = $"<a href=\"{inviteUrl}\"><img src=\"https://lcbotcs-0b1e10f8f000.herokuapp.com/public/discord.png\" width=\"16\" height=\"16\" \\></a> <strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span>:</strong> <em>{message}</em>";
 		await SendPsimHtml(psimRoom, psimId, text);
 		Console.WriteLine($"Sent {msg.Id} bridge message for {msg.Author.Username} (ID: {msg.Author.Id})");
 	}
