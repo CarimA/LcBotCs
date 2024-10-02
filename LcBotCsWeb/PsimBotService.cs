@@ -8,10 +8,10 @@ public class PsimBotService : BackgroundService
 	public PsimClient Client { get; }
 	private readonly IHostApplicationLifetime _lifeTime;
 
-	public PsimBotService(IServiceScopeFactory scopeFactory, PsimClientOptions options,
+	public PsimBotService(IServiceScopeFactory scopeFactory, Configuration config,
 		IHostApplicationLifetime lifeTime) : base(scopeFactory)
 	{
-		Client = new PsimClient(options);
+		Client = new PsimClient(config.PsimConfiguration);
 		_lifeTime = lifeTime;
 	}
 

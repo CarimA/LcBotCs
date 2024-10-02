@@ -17,9 +17,9 @@ public class Database
 	public Repository<VerificationCodeItem> VerificationCodes { get; }
 	public Repository<PsimAlt> Alts { get; }
 
-	public Database(DatabaseOptions options)
+	public Database(Configuration config)
 	{
-		var settings = MongoClientSettings.FromConnectionString(options.ConnectionString);
+		var settings = MongoClientSettings.FromConnectionString(config.DatabaseConnectionString);
 		settings.ServerApi = new ServerApi(ServerApiVersion.V1);
 		settings.LinqProvider = LinqProvider.V3;
 
@@ -33,11 +33,11 @@ public class Database
 			var result = client.GetDatabase("admin").RunCommand<BsonDocument>(new BsonDocument("ping", 1));
 			Console.WriteLine("Successfully connected to Mongodb");
 
-			_database = client.GetDatabase(options.DatabaseName);
+			_database = client.GetDatabase(config.DatabaseName);
 
-			if (!string.IsNullOrWhiteSpace(options.CacheCollectionName))
+			if (!string.IsNullOrWhiteSpace(config.DatabaseCacheCollectionName))
 			{
-				Cache = GetCollection<CachedItem>(options.CacheCollectionName);
+				Cache = GetCollection<CachedItem>(config.DatabaseCacheCollectionName);
 			}
 
 			AccountLinks = GetCollection<AccountLinkItem>("account-link");

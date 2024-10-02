@@ -1,8 +1,6 @@
-﻿using System.Runtime.InteropServices.ComTypes;
-using Discord;
+﻿using Discord;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
-using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Models;
@@ -13,14 +11,14 @@ namespace LcBotCsWeb.Modules.Bridge;
 public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 {
 	private readonly DiscordBotService _discord;
-	private readonly BridgeOptions _bridgeOptions;
+	private readonly Configuration _config;
 	private readonly AltTrackingService _altTracking;
 	private readonly Database _db;
 
-	public PsimToDiscordBridge(DiscordBotService discord, BridgeOptions bridgeOptions, AltTrackingService altTracking, Database db)
+	public PsimToDiscordBridge(DiscordBotService discord, Configuration config, AltTrackingService altTracking, Database db)
 	{
 		_discord = discord;
-		_bridgeOptions = bridgeOptions;
+		_config = config;
 		_altTracking = altTracking;
 		_db = db;
 	}
@@ -38,12 +36,12 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		if (message.StartsWith('/') || message.StartsWith('!'))
 			return;
 
-		var config = _bridgeOptions.LinkedGuilds.FirstOrDefault(linkedGuild => string.Equals(linkedGuild.PsimRoom, msg.Room.Name, StringComparison.InvariantCultureIgnoreCase));
+		var config = _config.BridgedGuilds.FirstOrDefault(linkedGuild => string.Equals(linkedGuild.PsimRoom, msg.Room.Name, StringComparison.InvariantCultureIgnoreCase));
 
 		if (config == null)
 			return;
 
-		var isMultiRoom = _bridgeOptions.LinkedGuilds.Count(linkedGuild => string.Equals(linkedGuild.PsimRoom, msg.Room.Name, StringComparison.InvariantCultureIgnoreCase)) > 1;
+		var isMultiRoom = _config.BridgedGuilds.Count(linkedGuild => string.Equals(linkedGuild.PsimRoom, msg.Room.Name, StringComparison.InvariantCultureIgnoreCase)) > 1;
 		var name = $"{PsimUsername.FromRank(msg.User.Rank)}{msg.User.DisplayName}".Trim();
 		var psimUserId = (await _altTracking.GetUser(msg.User))?.FirstOrDefault().AltId;
 		var discordId = string.Empty;

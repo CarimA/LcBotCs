@@ -3,16 +3,10 @@ using Discord.WebSocket;
 using Ganss.Xss;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
-using LcBotCsWeb.Modules.PsimDiscordLink;
-using MongoDB.Driver.Core.Bindings;
-using MongoDB.Driver.Core.WireProtocol.Messages;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
-using System;
 using System.Text.RegularExpressions;
-using System.Threading.Channels;
-using static MongoDB.Driver.WriteConcern;
 
 namespace LcBotCsWeb.Modules.Bridge;
 
@@ -20,18 +14,18 @@ public class DiscordToPsimBridge
 {
 	private readonly Database _database;
 	private readonly DiscordBotService _discord;
-	private readonly BridgeOptions _bridgeOptions;
+	private readonly Configuration _config;
 	private readonly PsimBotService _psim;
 	private readonly AltTrackingService _altTracking;
 	private readonly PunishmentTrackingService _punishmentTracking;
 	private readonly HtmlSanitizer _sanitiser;
 
-	public DiscordToPsimBridge(Database database, DiscordBotService discord, BridgeOptions bridgeOptions, PsimBotService psim,
+	public DiscordToPsimBridge(Database database, DiscordBotService discord, Configuration config, PsimBotService psim,
 		AltTrackingService altTracking, PunishmentTrackingService punishmentTracking)
 	{
 		_database = database;
 		_discord = discord;
-		_bridgeOptions = bridgeOptions;
+		_config = config;
 		_psim = psim;
 		_altTracking = altTracking;
 		_punishmentTracking = punishmentTracking;
@@ -47,12 +41,8 @@ public class DiscordToPsimBridge
 		if (msg.Channel is not ITextChannel channel)
 			return;
 		
-		var configs = _bridgeOptions.LinkedGuilds.Where(linkedGuild => linkedGuild.GuildId == channel.GuildId);
-
-		// if the current discord server doesn't support bridge, move on
-		if (configs == null)
-			return;
-
+		var configs = _config.BridgedGuilds.Where(linkedGuild => linkedGuild.GuildId == channel.GuildId);
+		
 		// if this isn't a message in the bridge channel, move on
 		foreach (var config in configs)
 		{
@@ -75,7 +65,7 @@ public class DiscordToPsimBridge
 			return;
 		}
 
-		var psimUser = (await _altTracking.GetUser(user.PsimUser))?.FirstOrDefault();
+		var psimUser = await _altTracking.GetActiveUser(user.PsimUser);
 
 		if (psimUser == null)
 		{
@@ -153,7 +143,7 @@ public class DiscordToPsimBridge
 					var replyDiscordUser =
 						await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink =>
 							accountLink.DiscordId == author.Id);
-					var replyUser = (await _altTracking.GetUser(replyDiscordUser.PsimUser))?.FirstOrDefault();
+					var replyUser = await _altTracking.GetActiveUser(replyDiscordUser.PsimUser);
 
 					if (replyUser != null)
 					{

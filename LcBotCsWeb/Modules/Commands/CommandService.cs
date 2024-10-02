@@ -34,12 +34,12 @@ public class CommandService : ISubscriber<PrivateMessage>, ISubscriber<ChatMessa
 		}
 	}
 
-	private readonly CommandOptions _options;
+	private readonly Configuration _config;
 	private readonly List<ICommand> _commands;
 
-	public CommandService(IServiceScopeFactory scopeFactory, CommandOptions options)
+	public CommandService(IServiceScopeFactory scopeFactory, Configuration config)
 	{
-		_options = options;
+		_config = config;
 		_commands = new List<ICommand> { new HelpCommand(this) };
 
 		var scope = scopeFactory.CreateScope();
@@ -90,12 +90,12 @@ public class CommandService : ISubscriber<PrivateMessage>, ISubscriber<ChatMessa
 		}
 	}
 
-	private bool IsCommand(string input) => input.StartsWith(_options.CommandString);
+	private bool IsCommand(string input) => input.StartsWith(_config.CommandPrefix);
 	private List<string> BreakMessage(string input) => Regex.Split(input, @",(?=(?:(?:[^""]*""){2})*[^""]*$)").ToList();
 	private bool TryParseCommand(string input, out ICommand command, out List<string> parameters)
 	{
 		var split = input.Split(' ', 2);
-		var commandString = split[0].Replace(_options.CommandString, string.Empty).Trim().ToLowerInvariant();
+		var commandString = split[0].Replace(_config.CommandPrefix, string.Empty).Trim().ToLowerInvariant();
 		command = _commands.FirstOrDefault(c => c.Aliases.Contains(commandString))!;
 		parameters = split.Length == 2 ? BreakMessage(split[1]) : new List<string>();
 		return command != null;

@@ -9,21 +9,21 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 	private readonly VerificationService _verification;
 	private readonly AltTrackingService _altTracking;
 	private readonly DiscordBotService _discord;
-	private readonly BridgeOptions _bridgeOptions;
+	private readonly Configuration _config;
 
 	public DiscordVerifyCommand(VerificationService verification, AltTrackingService altTracking,
-		DiscordBotService discord, BridgeOptions bridgeOptions)
+		DiscordBotService discord, Configuration config)
 	{
 		_verification = verification;
 		_altTracking = altTracking;
 		_discord = discord;
-		_bridgeOptions = bridgeOptions;
+		_config = config;
 		discord.Client.Ready += ClientOnReady;
 	}
 
 	private async Task ClientOnReady()
 	{
-		await Task.WhenAll(_bridgeOptions.LinkedGuilds.Select(linkedGuild =>
+		await Task.WhenAll(_config.BridgedGuilds.Select(linkedGuild =>
 			_discord.Interaction.RegisterCommandsToGuildAsync(linkedGuild.GuildId)));
 	}
 
@@ -35,7 +35,7 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 
 		var id = user.Id;
 		var guildId = user.GuildId;
-		var config = _bridgeOptions.LinkedGuilds.FirstOrDefault(linkedGuild => linkedGuild.GuildId == guildId);
+		var config = _config.BridgedGuilds.FirstOrDefault(linkedGuild => linkedGuild.GuildId == guildId);
 
 		if (config == null)
 		{

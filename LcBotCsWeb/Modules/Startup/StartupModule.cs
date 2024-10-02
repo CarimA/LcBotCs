@@ -6,17 +6,17 @@ namespace LcBotCsWeb.Modules.Startup;
 public class StartupModule : ISubscriber<LoginSuccess>
 {
 	private readonly PsimBotService _psim;
-	private readonly StartupOptions _options;
+	private readonly Configuration _config;
 
-	public StartupModule(PsimBotService psim, StartupOptions options)
+	public StartupModule(PsimBotService psim, Configuration config)
 	{
 		_psim = psim;
-		_options = options;
+		_config = config;
 	}
 
 	public async Task HandleEvent(LoginSuccess e)
 	{
-		await _psim.Client.SetAvatar(_options.Avatar);
-		await Task.WhenAll(_options.Rooms.Select(_psim.Client.Rooms.Join));
+		await _psim.Client.SetAvatar(_config.PsimAvatar);
+		await Task.WhenAll(_config.PsimRooms.Select(_psim.Client.Rooms.Join));
 	}
 }

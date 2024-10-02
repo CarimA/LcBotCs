@@ -9,11 +9,11 @@ public class DiscordBotService : BackgroundService
 {
 	public DiscordSocketClient Client { get; }
 	public InteractionService Interaction { get; }
-	private readonly DiscordBotOptions _config;
+	private readonly Configuration _config;
 	private readonly IHostApplicationLifetime _lifeTime;
 	private readonly IServiceProvider _serviceProvider;
 
-	public DiscordBotService(IServiceScopeFactory scopeFactory, DiscordBotOptions config, IHostApplicationLifetime lifeTime, IServiceProvider serviceProvider) : base(scopeFactory)
+	public DiscordBotService(IServiceScopeFactory scopeFactory, Configuration config, IHostApplicationLifetime lifeTime, IServiceProvider serviceProvider) : base(scopeFactory)
 	{
 		Client = new DiscordSocketClient(new DiscordSocketConfig()
 		{
@@ -43,7 +43,7 @@ public class DiscordBotService : BackgroundService
 
 	protected override async Task ExecuteAsync(CancellationToken stoppingToken)
 	{
-		await Client.LoginAsync(TokenType.Bot, _config.Token);
+		await Client.LoginAsync(TokenType.Bot, _config.DiscordToken);
 		await Client.StartAsync();
 	}
 
