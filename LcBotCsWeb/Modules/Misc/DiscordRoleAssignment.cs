@@ -2,6 +2,7 @@
 using Discord.Interactions;
 using Discord.WebSocket;
 using LcBotCsWeb.Data.Repositories;
+using LcBotCsWeb.Modules.AltTracking;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 
@@ -13,11 +14,13 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 	private const ulong MatchesRole = 400043115689541632;
 	private readonly DiscordBotService _discord;
 	private readonly Database _database;
+	private readonly AltTrackingService _altTracking;
 
-	public DiscordRoleAssignment(DiscordBotService discord, Database database)
+	public DiscordRoleAssignment(DiscordBotService discord, Database database, AltTrackingService altTracking)
 	{
 		_discord = discord;
 		_database = database;
+		_altTracking = altTracking;
 		discord.Client.Ready += ClientOnReady;
 	}
 
@@ -102,6 +105,38 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		var index = Math.Abs((id + (ulong)DateTime.UtcNow.Day).GetHashCode() % results.Count);
 		await RespondAsync(results[index].Replace("@", name));
 	}
+
+	[SlashCommand("updatealt", "Update your display name on Pokémon Showdown when using the bridge channel. If no name is provided, it will list the alts you can change your display name to.")]
+	public async Task UpdateAlt(string? name = null)
+	{
+		var user = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == Context.User.Id);
+
+		if (user == null)
+		{
+			await RespondAsync("You have not linked a Pokémon Showdown account to your Discord account.", ephemeral: true);
+			return;
+		}
+
+		var alts = await _altTracking.GetUser(user.PsimUser);
+		
+		if (alts == null || alts.Count == 0)
+		{
+			await RespondAsync("You do not appear to have any alts on Pokémon Showdown.", ephemeral: true);
+			return;
+		}
+		
+		var choices = alts.Select(alt => alt.PsimDisplayName);
+
+		if (name == null)
+		{
+			await RespondAsync($"Here are the alts you can update your display name to: {string.Join(", ", choices)}");
+		}
+		else
+		{
+
+		}
+	}
+
 
 	[SlashCommand("hotfix", "Administrative command")]
 	public async Task HotfixAccountLink(SocketGuildUser user, string psimName)

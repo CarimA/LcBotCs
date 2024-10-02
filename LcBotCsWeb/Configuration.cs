@@ -1,4 +1,5 @@
 using DotNetEnv;
+using LcBotCsWeb.Modules.AnnouncementCrosspost;
 using PsimCsLib;
 
 namespace LcBotCsWeb;
@@ -6,6 +7,7 @@ namespace LcBotCsWeb;
 public class Configuration
 {
 	public List<PsimLinkedGuild> BridgedGuilds { get; init; }
+	public List<PsimCrosspost> Crossposts { get; init; }
 	public string DiscordToken { get; init; }
 	public string CommandPrefix { get; init; }
 	public string PsimAvatar { get; init; }
@@ -23,6 +25,7 @@ public class Configuration
 		return new Configuration
 		{
 			BridgedGuilds = LoadConfigFromEnv<List<PsimLinkedGuild>>("BRIDGE_CONFIG"),
+			Crossposts = LoadConfigFromEnv<List<PsimCrosspost>>("CROSSPOSTS"),
 			DiscordToken = Utils.GetEnvVar("DISCORD_TOKEN", nameof(DiscordToken)),
 			CommandPrefix = Utils.GetEnvVar("COMMAND_PREFIX", nameof(CommandPrefix)),
 			PsimAvatar = Utils.GetEnvVar("PSIM_AVATAR", nameof(PsimAvatar)),

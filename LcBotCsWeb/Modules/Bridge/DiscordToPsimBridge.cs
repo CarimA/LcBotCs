@@ -1,12 +1,10 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using Ganss.Xss;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
-using System.Text.RegularExpressions;
 
 namespace LcBotCsWeb.Modules.Bridge;
 
@@ -18,7 +16,6 @@ public class DiscordToPsimBridge
 	private readonly PsimBotService _psim;
 	private readonly AltTrackingService _altTracking;
 	private readonly PunishmentTrackingService _punishmentTracking;
-	private readonly HtmlSanitizer _sanitiser;
 
 	public DiscordToPsimBridge(Database database, DiscordBotService discord, Configuration config, PsimBotService psim,
 		AltTrackingService altTracking, PunishmentTrackingService punishmentTracking)
@@ -29,7 +26,6 @@ public class DiscordToPsimBridge
 		_psim = psim;
 		_altTracking = altTracking;
 		_punishmentTracking = punishmentTracking;
-		_sanitiser = new HtmlSanitizer();
 		discord.Client.MessageReceived += ClientOnMessageReceived;
 	}
 
@@ -134,7 +130,7 @@ public class DiscordToPsimBridge
 					var lineSplit = content.Split("\n");
 					var split = lineSplit[0].Split(" - ", StringSplitOptions.TrimEntries);
 					var replyUser = (split.Length > 1 ? split[1] : lineSplit[0][2..].Trim());
-					await SendPsimHtml(config.PsimRoom, $"reply-{msg.Id}",
+					await _psim.Client.Rooms[config.PsimRoom].SendHtml($"reply-{msg.Id}",
 						$"<small>↱ reply to <strong><span class=\"username\">{replyUser}</span></strong>: {lineSplit[1]}</small>");
 				}
 				else
@@ -160,7 +156,7 @@ public class DiscordToPsimBridge
 						var replyDisplayRank = (Rank)Math.Max((int)(replyUserDetails?.GlobalRank ?? Rank.Normal),
 							(int)replyRoomRank);
 						var replyRank = PsimUsername.FromRank(replyDisplayRank).Trim();
-						await SendPsimHtml(config.PsimRoom, $"reply-{msg.Id}",
+						await _psim.Client.Rooms[config.PsimRoom].SendHtml($"reply-{msg.Id}",
 							$"<small>↱ reply to <strong><span class=\"username\">{replyRank}{replyUser.PsimDisplayName}</span></strong>: {replyMessage}</small>");
 					}
 				}
@@ -187,7 +183,7 @@ public class DiscordToPsimBridge
 
 		var psimId = $"discord-{msg.Id}-{index}";
 		var text = $"<a href=\"{inviteUrl}\"><img src=\"https://lcbotcs-0b1e10f8f000.herokuapp.com/public/discord.png\" width=\"14\" height=\"14\" \\></a> <strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span>:</strong> <em>{message}</em>";
-		await SendPsimHtml(psimRoom, psimId, text);
+		await _psim.Client.Rooms[psimRoom].SendHtml(psimId, text);
 		Console.WriteLine($"Sent {msg.Id} bridge message for {msg.Author.Username} (ID: {msg.Author.Id})");
 	}
 
@@ -196,88 +192,12 @@ public class DiscordToPsimBridge
 		if (message.ToLowerInvariant().Contains("discord.gg"))
 			return string.Empty;
 
-		try
-		{
-			message = _sanitiser.Sanitize(message);
-		}
-		catch
-		{
-			// ignored
-		}
-
-		// remember that everything after here is going to be sanitised
-
-		// replace markdown
-		message = Regex.Replace(message, "\\*\\*(.*?)\\*\\*", "<strong>$1</strong>");
-		message = Regex.Replace(message, "__(.*?)__", "<u>$1</u>");
-		message = Regex.Replace(message, "\\*(.*?)\\*", "<em>$1</em>");
-		message = Regex.Replace(message, "~~(.*?)~~", "<s>$1</s>");
-
-		// replace emoji with embedded image
-		message = await message.ReplaceAsync(new Regex("&lt;:(\\w+):([0-9]+)&gt;", RegexOptions.Singleline), RegexEmote(channel));
-
-		// replace mentions with psim names
-		message = await message.ReplaceAsync(new Regex("&lt;@!*&*([0-9]+)&gt;", RegexOptions.Singleline), RegexGetPsimName(channel));
+		message = message.Sanitise();
+		message = message.ParseBasicMarkdown();
+		message = await message.ParseEmoji(channel);
 		var roomUsers = _psim.Client.Rooms[psimRoom].Users.OrderByDescending(u => u.DisplayName.Length);
+		message = await message.ParseMentions(channel, roomUsers, _altTracking);
 
-		// replace psim names with username references
-		message = roomUsers.Aggregate(message, (current, roomUser) => Regex.Replace(current, $@"\b{roomUser.DisplayName}\b", $"<span class=\"username\"><username>{roomUser.DisplayName}</username></span>", RegexOptions.IgnoreCase));
 		return message;
-
-	}
-
-	private async Task SendPsimHtml(string psimRoom, string id, string text)
-	{
-		var output = $"/adduhtml {id},{text}";
-		await _psim.Client.Rooms[psimRoom].Send(output);
-	}
-
-	private Func<Match, Task<string>> RegexGetPsimName(ITextChannel channel)
-	{
-		return async (match) =>
-		{
-			try
-			{
-				var id = ulong.Parse(match.Groups[1].Value);
-				var user = (await _altTracking.GetUser(id))?.FirstOrDefault();
-
-				if (user != null)
-					return $"<span class=\"username\"><username>{user.PsimDisplayName}</username></span>";
-
-				var discordUser = await channel.GetUserAsync(id);
-
-				if (discordUser != null)
-					return discordUser.DisplayName;
-			}
-			catch
-			{
-				return string.Empty;
-			}
-
-			return string.Empty;
-		};
-	}
-
-	private Func<Match, Task<string>> RegexEmote(ITextChannel channel)
-	{
-		return (match) =>
-		{
-			try
-			{
-				var name = match.Groups[1].Value;
-				var emoteId = match.Groups[2].Value;
-				var field = $"<:{name}:{emoteId}>";
-				var isEmote = Emote.TryParse(field, out var emote);
-				var isInternal = channel.Guild.Emotes.Contains(emote);
-
-				return Task.FromResult(isEmote && isInternal
-					? $"<img src=\"{emote.Url}\" width=\"16\" height=\"16\" \\>"
-					: string.Empty);
-			}
-			catch
-			{
-				return Task.FromResult(string.Empty);
-			}
-		};
 	}
 }
