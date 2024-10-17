@@ -1,5 +1,6 @@
 ﻿using Discord;
 using Discord.Interactions;
+using Discord.WebSocket;
 using LcBotCsWeb.Modules.AltTracking;
 
 namespace LcBotCsWeb.Modules.PsimDiscordLink;
@@ -19,6 +20,28 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 		_discord = discord;
 		_config = config;
 		discord.Client.Ready += ClientOnReady;
+		discord.Client.UserJoined += ClientOnUserJoined;
+	}
+
+	private async Task ClientOnUserJoined(SocketGuildUser user)
+	{
+		var guildId = user.Guild.Id;
+
+		var config = _config.BridgedGuilds.FirstOrDefault(linkedGuild => linkedGuild.GuildId == guildId);
+
+		if (config == null)
+		{
+			return;
+		}
+
+		var id = user.Id;
+		var psimUser = await _verification.GetVerifiedUserByDiscordId(id);
+
+		if (psimUser != null)
+		{
+			await user.AddRoleAsync(config.RoleId);
+			Console.WriteLine($"{psimUser?.PsimId} has rejoined the server and been given bridge access.");
+		}
 	}
 
 	private async Task ClientOnReady()
