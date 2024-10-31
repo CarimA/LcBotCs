@@ -106,8 +106,32 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		await RespondAsync(results[index].Replace("@", name));
 	}
 
-	[SlashCommand("updatealt", "Update your display name on Pokémon Showdown when using the bridge channel. If no name is provided, it will list the alts you can change your display name to.")]
-	public async Task UpdateAlt(string? name = null)
+	[SlashCommand("checkalts", "Check what Pokémon Showdown accounts you can use when using the bridge channel.")]
+	public async Task CheckAlts()
+	{
+		var user = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == Context.User.Id);
+
+		if (user == null)
+		{
+			await RespondAsync("You have not linked a Pokémon Showdown account to your Discord account.", ephemeral: true);
+			return;
+		}
+
+		var alts = await _altTracking.GetUser(user.PsimUser);
+
+		if (alts == null || alts.Count == 0)
+		{
+			await RespondAsync("You do not appear to have any alts on Pokémon Showdown.", ephemeral: true);
+			return;
+		}
+
+		var choices = alts.Select(alt => alt.PsimDisplayName);
+		await RespondAsync($"Here are the alts you can update your display name to: {string.Join(", ", choices)}", ephemeral: true);
+
+	}
+
+	[SlashCommand("updatealt", "Update your display name on Pokémon Showdown when using the bridge channel.")]
+	public async Task UpdateAlt(string name)
 	{
 		var user = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == Context.User.Id);
 
@@ -124,17 +148,18 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 			await RespondAsync("You do not appear to have any alts on Pokémon Showdown.", ephemeral: true);
 			return;
 		}
-		
-		var choices = alts.Select(alt => alt.PsimDisplayName);
 
-		if (name == null)
+		var chosen = alts.FirstOrDefault(alt => String.Equals(alt.PsimDisplayName, name, StringComparison.InvariantCultureIgnoreCase));
+		if (chosen == null)
 		{
-			await RespondAsync($"Here are the alts you can update your display name to: {string.Join(", ", choices)}");
+			await RespondAsync(
+				"I could not confirm this as one of your alt accounts. Use the command `/checkalts` to check what you can change your name to.", ephemeral: true);
+			return;
 		}
-		else
-		{
 
-		}
+		await RespondAsync("Updating...", ephemeral: true);
+		await _altTracking.UpdateActiveUser(user, chosen);
+		await FollowupAsync("Display name updated.", ephemeral: true);
 	}
 
 

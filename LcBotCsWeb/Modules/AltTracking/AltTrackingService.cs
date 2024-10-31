@@ -1,4 +1,5 @@
 ﻿using LcBotCsWeb.Data.Repositories;
+using LcBotCsWeb.Modules.PsimDiscordLink;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
@@ -177,5 +178,26 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 	public async Task<PsimAlt?> GetActiveUser(PsimUsername username)
 	{
 		return (await GetUser(username))?.FirstOrDefault(user => user.IsActive);
+	}
+
+	public async Task UpdateActiveUser(AccountLinkItem user, PsimAlt chosen)
+	{
+		var links = await _database.AccountLinks.Query
+			.Where(link => link.Id == user.Id)
+			.ToListAsync();
+		
+		foreach (var link in links)
+		{
+			var id = link.PsimUser;
+			var alts = await _database.Alts.Query
+				.Where(alt => alt.AltId == id)
+				.ToListAsync();
+
+			foreach (var alt in alts)
+			{
+				alt.IsActive = alt.Id == chosen.Id;
+				await _database.Alts.Update(alt);
+			}
+		}
 	}
 }
