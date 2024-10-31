@@ -126,7 +126,7 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		}
 
 		var choices = alts.Select(alt => alt.PsimDisplayName);
-		await RespondAsync($"Here are the alts you can update your display name to: {string.Join(", ", choices)}", ephemeral: true);
+		await RespondAsync($"**Here are the alts you can update your display name to:** {string.Join(", ", choices)}", ephemeral: true);
 
 	}
 
@@ -158,6 +158,7 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		}
 
 		await RespondAsync("Updating...", ephemeral: true);
+		Console.WriteLine($"Updating {user.DiscordId} display name to {chosen.PsimDisplayName}");
 		await _altTracking.UpdateActiveUser(user, chosen);
 		await FollowupAsync("Display name updated.", ephemeral: true);
 	}
