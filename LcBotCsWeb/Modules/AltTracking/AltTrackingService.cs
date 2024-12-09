@@ -1,4 +1,5 @@
-﻿using LcBotCsWeb.Data.Repositories;
+﻿using Discord;
+using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.PsimDiscordLink;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -98,6 +99,8 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 
 		var didSomethingChange = false;
 		var discordIds = new HashSet<ulong>();
+		var todo = new List<Task>();
+
 		foreach (var user in matchingUsers)
 		{
 			var oldActive = user.IsActive;
@@ -119,20 +122,22 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 				foreach (var link in accountLink)
 				{
 					link.PsimUser = firstId;
-					await _database.AccountLinks.Update(link);
+					todo.Add(_database.AccountLinks.Update(link));
 					discordIds.Add(link.DiscordId);
 				}
 
-				await _database.Alts.Update(user);
+				todo.Add(_database.Alts.Update(user));
 			}
 		}
 
 		if (discordIds.Count > 1)
 		{
 			var ids = discordIds.Select(discordId => $"<@{discordId}>");
-			Console.WriteLine("<@104711168601415680>");
-			Console.WriteLine($"WARNING: deduplicated the following alt accounts but they appear to belong to multiple unique users, indicating the possibility of account sharing, please inspect: {string.Join(", ", ids)}");
+			Console.WriteLine($"WARNING: attempted to deduplicate the following alt accounts but they appear to belong to multiple unique users, indicating the possibility of account sharing, please inspect: {string.Join(", ", ids)}");
+			return;
 		}
+
+		await Task.WhenAll(todo);
 
 		if (didSomethingChange)
 			Console.WriteLine($"Alts updated ({firstId}) - active: {username.Token} - {string.Join(", ", matchingUsers.Select(user => user.PsimId))}");
