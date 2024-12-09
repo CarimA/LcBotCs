@@ -15,12 +15,14 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 	private readonly DiscordBotService _discord;
 	private readonly Database _database;
 	private readonly AltTrackingService _altTracking;
+	private readonly Configuration _config;
 
-	public DiscordRoleAssignment(DiscordBotService discord, Database database, AltTrackingService altTracking)
+	public DiscordRoleAssignment(DiscordBotService discord, Database database, AltTrackingService altTracking, Configuration config)
 	{
 		_discord = discord;
 		_database = database;
 		_altTracking = altTracking;
+		_config = config;
 		discord.Client.Ready += ClientOnReady;
 	}
 
@@ -201,5 +203,58 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		}
 
 		await FollowupAsync("Successfully updated user.", null, false, true);
+	}
+
+
+	[SlashCommand("forceunlink", "Administrative command")]
+	public async Task ForceUnlinkAccount(SocketGuildUser user, string reason)
+	{
+		if (Context.User.Id != 104711168601415680)
+		{
+			await RespondAsync("You do not have permission to use this command.", null, false, true);
+			return;
+		}
+
+		await DeferAsync(true);
+
+		var guildId = user.Guild.Id;
+		var config = _config.BridgedGuilds.FirstOrDefault(linkedGuild => linkedGuild.GuildId == guildId);
+
+		if (config == null)
+		{
+			await FollowupAsync("This command is not supported on this server.", null, false, true);
+			return;
+		}
+
+
+		var id = user.Id;
+		var accountLinks = await _database.AccountLinks.Query.Where(link => link.DiscordId == id).ToListAsync();
+		var tasks = new List<Task>();
+
+		foreach (var accountLink in accountLinks)
+		{
+			var alts = await _database.Alts.Query.Where(alt => alt.AltId == accountLink.PsimUser).ToListAsync();
+
+			foreach (var alt in alts)
+			{
+				tasks.Add(_database.Alts.Delete(alt));
+			}
+			tasks.Add(_database.AccountLinks.Delete(accountLink));
+		}
+
+		await user.RemoveRoleAsync(config.RoleId);
+		await Task.WhenAll(tasks);
+
+		await FollowupAsync($"Removed bridge role, account link and alts for <@{id}>.");
+
+		try
+		{
+			await user.SendMessageAsync(
+				$"Hello, your Pokemon Showdown bridge link has been forcibly removed from {user.Guild.Name}. Reason: {reason}.");
+		}
+		catch
+		{
+			await FollowupAsync($"Unable to message user to let them know.");
+		}
 	}
 }

@@ -34,6 +34,9 @@ public class DiscordToPsimBridge
 		if (msg.Author.Id == _discord.Client.CurrentUser.Id)
 			return;
 
+		if (msg.Author.IsBot || msg.Author.IsWebhook)
+			return;
+
 		if (msg.Channel is not ITextChannel channel)
 			return;
 		

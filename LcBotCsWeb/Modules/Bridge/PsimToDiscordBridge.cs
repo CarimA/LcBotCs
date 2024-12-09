@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Webhook;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
 using MongoDB.Driver.Linq;
@@ -14,6 +15,8 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 	private readonly Configuration _config;
 	private readonly AltTrackingService _altTracking;
 	private readonly Database _db;
+	private DiscordWebhookClient? _webhook;
+	private string? _lastDiscordId;
 
 	public PsimToDiscordBridge(DiscordBotService discord, Configuration config, AltTrackingService altTracking, Database db)
 	{
@@ -45,6 +48,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		var name = $"{PsimUsername.FromRank(msg.User.Rank)}{msg.User.DisplayName}".Trim();
 		var psimUserId = (await _altTracking.GetUser(msg.User))?.FirstOrDefault().AltId;
 		var discordId = string.Empty;
+		string? avatarUrl = $"https://robohash.org/{name}.png";
 
 		if (psimUserId != null)
 		{
@@ -56,9 +60,10 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		}
 
 		var displayRoom = isMultiRoom ? $"[{msg.Room.Name}] " : string.Empty;
-		var displayName = string.IsNullOrEmpty(discordId) ? name : $"<@{discordId}> - {name}";
+		var discordName = (string.IsNullOrEmpty(discordId) || _lastDiscordId == discordId) ? string.Empty : $"-# <@{discordId}>\n";
+		var displayName = $"{name}{(displayRoom == string.Empty ? string.Empty : $" (From {displayRoom})")}";
 
-		var output = $"-# **{displayRoom}{displayName}**\n{message}";
+		var output = $"{discordName}{message}";
 
 		if (string.IsNullOrEmpty(output))
 			return;
@@ -67,6 +72,30 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		if (guild?.Channels.FirstOrDefault(c => c.Id == config.BridgeRoom) is not ITextChannel channel)
 			return;
 
-		await channel.SendMessageAsync(output, allowedMentions: AllowedMentions.None);
+		if (_webhook == null)
+		{
+			var webhook = await channel.CreateWebhookAsync("psim-bridge", null, RequestOptions.Default);
+			_webhook = new DiscordWebhookClient(webhook);
+		}
+
+		if (discordId != string.Empty)
+		{
+			try
+			{
+				var user = await channel.Guild.GetUserAsync(ulong.Parse(discordId), CacheMode.AllowDownload);
+				avatarUrl = user.GetAvatarUrl();
+			}
+			catch
+			{
+				// ignored
+			}
+		}
+
+		await _webhook.SendMessageAsync(output, username: displayName,  avatarUrl: avatarUrl, allowedMentions: AllowedMentions.None);
+		_lastDiscordId = discordId;
+
+		//await guild.CurrentUser.ModifyAsync((user) => user.Nickname = displayName);
+		//await channel.SendMessageAsync(output, allowedMentions: AllowedMentions.None);
+		//await guild.CurrentUser.ModifyAsync((user) => user.Nickname = string.Empty);
 	}
 }
