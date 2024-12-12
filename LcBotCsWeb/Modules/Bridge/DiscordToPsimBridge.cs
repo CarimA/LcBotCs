@@ -39,9 +39,9 @@ public class DiscordToPsimBridge
 
 		if (msg.Channel is not ITextChannel channel)
 			return;
-		
+
 		var configs = _config.BridgedGuilds.Where(linkedGuild => linkedGuild.GuildId == channel.GuildId);
-		
+
 		// if this isn't a message in the bridge channel, move on
 		foreach (var config in configs)
 		{

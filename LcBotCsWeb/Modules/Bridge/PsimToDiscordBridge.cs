@@ -1,12 +1,9 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Threading.Channels;
-using Discord;
+﻿using Discord;
 using Discord.Webhook;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
 using LcBotCsWeb.Modules.Misc;
 using MongoDB.Driver;
-using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Models;
@@ -84,7 +81,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			if (webhookConfig != null)
 			{
 				_webhook = await TryGetWebhook(webhookConfig, channel) ??
-				           await OverwriteWebhookConfig(webhookConfig, channel, guild);
+						   await OverwriteWebhookConfig(webhookConfig, channel, guild);
 			}
 			else
 				_webhook = await OverwriteWebhookConfig(null, channel, guild);
@@ -97,14 +94,14 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 				var user = await channel.Guild.GetUserAsync(ulong.Parse(discordId), CacheMode.AllowDownload);
 				avatarUrl = user.GetAvatarUrl();
 			}
-			catch(Exception ex)
+			catch (Exception ex)
 			{
 				Console.WriteLine(ex.Message);
 				// ignored
 			}
 		}
 
-		await _webhook.SendMessageAsync(output, username: displayName,  avatarUrl: avatarUrl, allowedMentions: AllowedMentions.None);
+		await _webhook.SendMessageAsync(output, username: displayName, avatarUrl: avatarUrl, allowedMentions: AllowedMentions.None);
 		_lastDiscordId = discordId;
 
 		//await channel.SendMessageAsync(output, allowedMentions: AllowedMentions.None);

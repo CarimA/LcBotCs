@@ -144,7 +144,7 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		}
 
 		var alts = await _altTracking.GetUser(user.PsimUser);
-		
+
 		if (alts == null || alts.Count == 0)
 		{
 			await RespondAsync("You do not appear to have any alts on Pokémon Showdown.", ephemeral: true);

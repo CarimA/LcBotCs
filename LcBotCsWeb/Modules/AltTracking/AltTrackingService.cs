@@ -1,5 +1,4 @@
-﻿using Discord;
-using LcBotCsWeb.Data.Repositories;
+﻿using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.PsimDiscordLink;
 using MongoDB.Bson;
 using MongoDB.Driver;
@@ -190,7 +189,7 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 		var links = await _database.AccountLinks.Query
 			.Where(link => link.Id == user.Id)
 			.ToListAsync();
-		
+
 		foreach (var link in links)
 		{
 			var id = link.PsimUser;

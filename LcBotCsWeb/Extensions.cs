@@ -1,9 +1,9 @@
 ﻿using Discord;
+using Ganss.Xss;
+using LcBotCsWeb.Modules.AltTracking;
+using PsimCsLib.Entities;
 using System.Text;
 using System.Text.RegularExpressions;
-using LcBotCsWeb.Modules.AltTracking;
-using Ganss.Xss;
-using PsimCsLib.Entities;
 
 namespace LcBotCsWeb;
 
@@ -125,7 +125,7 @@ public static class Extensions
 		return input;
 	}
 
-	public static async Task<string>ParseMentions(this string input, ITextChannel channel, IEnumerable<PsimUsername> users, AltTrackingService altTracking)
+	public static async Task<string> ParseMentions(this string input, ITextChannel channel, IEnumerable<PsimUsername> users, AltTrackingService altTracking)
 	{
 		input = await input.ReplaceAsync(new Regex("&lt;@!*&*([0-9]+)&gt;", RegexOptions.Singleline), channel.MatchPsimName(altTracking));
 		input = users.Aggregate(input, (current, roomUser) => Regex.Replace(current, $@"\b{roomUser.DisplayName}\b", $"<span class=\"username\"><username>{roomUser.DisplayName}</username></span>", RegexOptions.IgnoreCase));
