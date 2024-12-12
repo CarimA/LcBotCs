@@ -109,7 +109,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		}
 		catch (Exception ex)
 		{
-			await channel.SendMessageAsync($"{displayName}\n{message}", allowedMentions: AllowedMentions.None);
+			await channel.SendMessageAsync($"-# {displayName}\n{message}", allowedMentions: AllowedMentions.None);
 			Console.WriteLine($"Webhook failed, fallback used: {ex.Message}");
 		}
 	}
