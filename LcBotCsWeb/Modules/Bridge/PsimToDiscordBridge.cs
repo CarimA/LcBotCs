@@ -1,7 +1,12 @@
-﻿using Discord;
+﻿using System.Diagnostics.CodeAnalysis;
+using System.Threading.Channels;
+using Discord;
 using Discord.Webhook;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
+using LcBotCsWeb.Modules.Misc;
+using MongoDB.Driver;
+using MongoDB.Driver.Core.Bindings;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Models;
@@ -74,8 +79,15 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 
 		if (_webhook == null)
 		{
-			var webhook = await channel.CreateWebhookAsync("psim-bridge", null, RequestOptions.Default);
-			_webhook = new DiscordWebhookClient(webhook);
+			var webhookConfig = await _db.BridgeWebhooks.Query.FirstOrDefaultAsync(wh => wh.ChannelId == channel.Id && wh.GuildId == guild.Id);
+
+			if (webhookConfig != null)
+			{
+				_webhook = await TryGetWebhook(webhookConfig, channel) ??
+				           await OverwriteWebhookConfig(webhookConfig, channel, guild);
+			}
+			else
+				_webhook = await OverwriteWebhookConfig(null, channel, guild);
 		}
 
 		if (discordId != string.Empty)
@@ -85,8 +97,9 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 				var user = await channel.Guild.GetUserAsync(ulong.Parse(discordId), CacheMode.AllowDownload);
 				avatarUrl = user.GetAvatarUrl();
 			}
-			catch
+			catch(Exception ex)
 			{
+				Console.WriteLine(ex.Message);
 				// ignored
 			}
 		}
@@ -94,8 +107,39 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		await _webhook.SendMessageAsync(output, username: displayName,  avatarUrl: avatarUrl, allowedMentions: AllowedMentions.None);
 		_lastDiscordId = discordId;
 
-		//await guild.CurrentUser.ModifyAsync((user) => user.Nickname = displayName);
 		//await channel.SendMessageAsync(output, allowedMentions: AllowedMentions.None);
-		//await guild.CurrentUser.ModifyAsync((user) => user.Nickname = string.Empty);
+	}
+
+	async Task<DiscordWebhookClient?> TryGetWebhook(BridgeWebhook? webhookConfig, ITextChannel channel)
+	{
+		if (webhookConfig == null)
+			return null;
+
+		try
+		{
+			var webhookInfo = await channel.GetWebhookAsync(webhookConfig.WebhookId, RequestOptions.Default);
+			return webhookInfo == null ? null : new DiscordWebhookClient(webhookInfo);
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine(ex.Message);
+			return null;
+		}
+	}
+
+	async Task<IWebhook> CreateWebhook(ITextChannel channel)
+	{
+		var webhook = await channel.CreateWebhookAsync("psim-bridge", null, RequestOptions.Default);
+		return webhook;
+	}
+
+	async Task<DiscordWebhookClient> OverwriteWebhookConfig(BridgeWebhook? webhookConfig, ITextChannel channel, IGuild guild)
+	{
+		if (webhookConfig != null)
+			await _db.BridgeWebhooks.Delete(webhookConfig);
+
+		var newWebhook = await CreateWebhook(channel);
+		await _db.BridgeWebhooks.Insert(new BridgeWebhook() { ChannelId = channel.Id, GuildId = guild.Id, WebhookId = newWebhook.Id });
+		return new DiscordWebhookClient(newWebhook);
 	}
 }

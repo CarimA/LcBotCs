@@ -1,5 +1,6 @@
 ﻿using LcBotCsWeb.Data.Models;
 using LcBotCsWeb.Modules.AltTracking;
+using LcBotCsWeb.Modules.Misc;
 using LcBotCsWeb.Modules.PsimDiscordLink;
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization;
@@ -16,6 +17,7 @@ public class Database
 	public Repository<AccountLinkItem> AccountLinks { get; }
 	public Repository<VerificationCodeItem> VerificationCodes { get; }
 	public Repository<PsimAlt> Alts { get; }
+	public Repository<BridgeWebhook> BridgeWebhooks { get; }
 
 	public Database(Configuration config)
 	{
@@ -43,6 +45,7 @@ public class Database
 			AccountLinks = GetCollection<AccountLinkItem>("account-link");
 			VerificationCodes = GetCollection<VerificationCodeItem>("verification-codes");
 			Alts = GetCollection<PsimAlt>("alts");
+			BridgeWebhooks = GetCollection<BridgeWebhook>("bridge-webhooks");
 		}
 		catch (Exception ex)
 		{
