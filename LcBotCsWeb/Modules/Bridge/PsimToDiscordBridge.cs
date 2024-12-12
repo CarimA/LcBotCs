@@ -101,10 +101,17 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			}
 		}
 
-		await _webhook.SendMessageAsync(output, username: displayName, avatarUrl: avatarUrl, allowedMentions: AllowedMentions.None);
-		_lastDiscordId = discordId;
-
-		//await channel.SendMessageAsync(output, allowedMentions: AllowedMentions.None);
+		try
+		{
+			await _webhook.SendMessageAsync(output, username: displayName, avatarUrl: avatarUrl,
+				allowedMentions: AllowedMentions.None);
+			_lastDiscordId = discordId;
+		}
+		catch (Exception ex)
+		{
+			await channel.SendMessageAsync($"{displayName}\n{message}", allowedMentions: AllowedMentions.None);
+			Console.WriteLine($"Webhook failed, fallback used: {ex.Message}");
+		}
 	}
 
 	async Task<DiscordWebhookClient?> TryGetWebhook(BridgeWebhook? webhookConfig, ITextChannel channel)
