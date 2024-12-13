@@ -185,7 +185,7 @@ public class DiscordToPsimBridge
 			return;
 
 		var psimId = $"discord-{msg.Id}-{index}";
-		var text = $"<a href=\"{inviteUrl}\"><img src=\"https://lcbotcs-0b1e10f8f000.herokuapp.com/public/discord.png\" width=\"12\" height=\"12W\" \\></a> <strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span>:</strong> <em>{message}</em>";
+		var text = $"<a href=\"{inviteUrl}\"><img src=\"https://lcbotcs-0b1e10f8f000.herokuapp.com/public/discord.png\" width=\"12\" height=\"12\" \\></a> <strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span>:</strong> <em>{message}</em>";
 		await _psim.Client.Rooms[psimRoom].SendHtml(psimId, text);
 		Console.WriteLine($"Sent {msg.Id} (discord) bridge message for {msg.Author.Username} (ID: {msg.Author.Id})");
 	}
