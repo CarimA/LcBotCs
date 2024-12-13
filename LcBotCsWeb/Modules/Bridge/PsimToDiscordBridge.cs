@@ -106,6 +106,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			await _webhook.SendMessageAsync(output, username: displayName, avatarUrl: avatarUrl,
 				allowedMentions: AllowedMentions.None);
 			_lastDiscordId = discordId;
+			Console.WriteLine($"Sent (psim) bridge message for {displayName} (webhook)");
 		}
 		catch (Exception ex1)
 		{
@@ -116,11 +117,13 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 				await _webhook.SendMessageAsync(output, username: displayName,
 					allowedMentions: AllowedMentions.None);
 				_lastDiscordId = discordId;
+				Console.WriteLine($"Sent (psim) bridge message for {displayName} (webhook noavatar)");
 			}
 			catch (Exception ex2)
 			{
 				await channel.SendMessageAsync($"-# {displayName}\n{message}", allowedMentions: AllowedMentions.None);
 				Console.WriteLine($"Webhook failed, fallback used: {ex2.Message}");
+				Console.WriteLine($"Sent (psim) bridge message for {displayName} (fallback)");
 			}
 		}
 	}
