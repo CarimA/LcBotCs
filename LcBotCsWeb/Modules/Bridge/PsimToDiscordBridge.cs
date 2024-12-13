@@ -54,8 +54,10 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 
 		if (psimUserId != null)
 		{
+			// only show a linked username if they're using the alt that's set to display
 			var accountLink = await _db.AccountLinks.Query.FirstOrDefaultAsync(link => link.PsimUser == psimUserId);
-			if (accountLink != null)
+			var alt = await _db.Alts.Query.FirstOrDefaultAsync(alt => alt.AltId == accountLink.PsimUser);
+			if (accountLink != null && alt is { IsActive: true })
 			{
 				discordId = $"{accountLink.DiscordId}";
 			}
