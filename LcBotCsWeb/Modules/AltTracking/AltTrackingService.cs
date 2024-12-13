@@ -84,7 +84,7 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 		if (matchingToken.Count == 0)
 			return;
 
-		var altIds = matchingToken.Select(alt => alt.AltId);
+		var altIds = matchingToken.Select(alt => alt.AltId).ToList();
 
 		if (!altIds.Any())
 			return;
@@ -102,31 +102,23 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 
 		foreach (var user in matchingUsers)
 		{
-			var oldActive = user.IsActive;
-			var newActive = user.PsimId == username.Token;
+			if (user.IsActive == (user.PsimId == username.Token) && user.AltId == firstId)
+				continue;
 
-			var oldId = user.AltId;
+			var accountLink = await _database.AccountLinks.Query.Where(link => link.PsimUser == user.AltId)
+				.ToListAsync();
 
-			var changed = (oldActive != newActive) || (oldId != firstId);
+			didSomethingChange = true;
+			user.AltId = firstId;
 
-			if (changed)
+			foreach (var link in accountLink)
 			{
-				var accountLink = await _database.AccountLinks.Query.Where(link => link.PsimUser == user.AltId)
-					.ToListAsync();
-
-				didSomethingChange = true;
-				user.IsActive = newActive;
-				user.AltId = firstId;
-
-				foreach (var link in accountLink)
-				{
-					link.PsimUser = firstId;
-					todo.Add(_database.AccountLinks.Update(link));
-					discordIds.Add(link.DiscordId);
-				}
-
-				todo.Add(_database.Alts.Update(user));
+				link.PsimUser = firstId;
+				todo.Add(_database.AccountLinks.Update(link));
+				discordIds.Add(link.DiscordId);
 			}
+
+			todo.Add(_database.Alts.Update(user));
 		}
 
 		if (discordIds.Count > 1)

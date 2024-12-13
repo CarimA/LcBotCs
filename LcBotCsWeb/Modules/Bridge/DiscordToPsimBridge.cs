@@ -132,7 +132,7 @@ public class DiscordToPsimBridge
 					var content = replyTo.CleanContent;
 					var lineSplit = content.Split("\n");
 					var split = lineSplit[0].Split(" - ", StringSplitOptions.TrimEntries);
-					var replyUser = (split.Length > 1 ? split[1] : lineSplit[0][2..].Trim());
+					var replyUser = split.Length > 1 ? split[1] : lineSplit[0][2..].Trim();
 					await _psim.Client.Rooms[config.PsimRoom].SendHtml($"reply-{msg.Id}",
 						$"<small>↱ reply to <strong><span class=\"username\">{replyUser}</span></strong>: {lineSplit[1]}</small>");
 				}
