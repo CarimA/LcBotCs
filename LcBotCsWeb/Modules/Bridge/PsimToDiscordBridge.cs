@@ -107,10 +107,21 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 				allowedMentions: AllowedMentions.None);
 			_lastDiscordId = discordId;
 		}
-		catch (Exception ex)
+		catch (Exception ex1)
 		{
-			await channel.SendMessageAsync($"-# {displayName}\n{message}", allowedMentions: AllowedMentions.None);
-			Console.WriteLine($"Webhook failed, fallback used: {ex.Message}");
+			Console.WriteLine($"Webhook failed (output: {output}) (username: {displayName} (avatarUrl: {avatarUrl}), retrying without avatar");
+			try
+			{
+				// try it without an avatar, let's see if that's the issue...
+				await _webhook.SendMessageAsync(output, username: displayName,
+					allowedMentions: AllowedMentions.None);
+				_lastDiscordId = discordId;
+			}
+			catch (Exception ex2)
+			{
+				await channel.SendMessageAsync($"-# {displayName}\n{message}", allowedMentions: AllowedMentions.None);
+				Console.WriteLine($"Webhook failed, fallback used: {ex2.Message}");
+			}
 		}
 	}
 
