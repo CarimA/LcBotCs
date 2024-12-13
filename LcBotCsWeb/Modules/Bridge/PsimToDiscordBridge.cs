@@ -8,6 +8,7 @@ using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Models;
 using PsimCsLib.PubSub;
+using System.Text.RegularExpressions;
 
 namespace LcBotCsWeb.Modules.Bridge;
 
@@ -50,7 +51,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		var name = $"{PsimUsername.FromRank(msg.User.Rank)}{msg.User.DisplayName}".Trim();
 		var psimUserId = (await _altTracking.GetUser(msg.User))?.FirstOrDefault().AltId;
 		var discordId = string.Empty;
-		string? avatarUrl = $"https://robohash.org/{name}.png";
+		string? avatarUrl = $"https://robohash.org/{RemoveSpecialCharacters(name)}.png";
 
 		if (psimUserId != null)
 		{
@@ -130,6 +131,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		}
 	}
 
+	private static string RemoveSpecialCharacters(string str) => Regex.Replace(str, "[^a-zA-Z0-9_. ]+", "", RegexOptions.Compiled);
 	async Task<DiscordWebhookClient?> TryGetWebhook(BridgeWebhook? webhookConfig, ITextChannel channel)
 	{
 		if (webhookConfig == null)
