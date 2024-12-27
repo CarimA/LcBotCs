@@ -3,7 +3,6 @@ using Discord.Webhook;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
 using LcBotCsWeb.Modules.Misc;
-using MongoDB.Driver;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Models;
@@ -30,7 +29,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 	}
 
 	public async Task HandleEvent(ChatMessage msg)
-	{
+	{ 
 		if (msg.User.DisplayName == Utils.GetEnvVar("PSIM_USERNAME", "PSIM_USERNAME"))
 			return;
 
@@ -104,6 +103,8 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			}
 		}
 
+		var retry = false;
+
 		try
 		{
 			await _webhook.SendMessageAsync(output, username: displayName, avatarUrl: avatarUrl,
@@ -111,24 +112,41 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			_lastDiscordId = discordId;
 			Console.WriteLine($"Sent (psim) bridge message for {displayName} (webhook)");
 		}
-		catch (Exception ex1)
+		catch (Exception ex)
 		{
 			Console.WriteLine($"Webhook failed (output: {output}) (username: {displayName} (avatarUrl: {avatarUrl}), retrying without avatar");
-			try
-			{
-				// try it without an avatar, let's see if that's the issue...
-				await _webhook.SendMessageAsync(output, username: displayName,
-					allowedMentions: AllowedMentions.None);
-				_lastDiscordId = discordId;
-				Console.WriteLine($"Sent (psim) bridge message for {displayName} (webhook noavatar)");
-			}
-			catch (Exception ex2)
-			{
-				await channel.SendMessageAsync($"-# {displayName}\n{message}", allowedMentions: AllowedMentions.None);
-				Console.WriteLine($"Webhook failed, fallback used: {ex2.Message}");
-				Console.WriteLine($"Sent (psim) bridge message for {displayName} (fallback)");
-			}
+			Console.WriteLine(ex.Message);
+			retry = true;
 		}
+
+		if (!retry)
+		{
+			return;
+		}
+
+		retry = false;
+
+		try
+		{
+			// try it without an avatar, let's see if that's the issue...
+			await _webhook.SendMessageAsync(output, username: displayName,
+				allowedMentions: AllowedMentions.None);
+			_lastDiscordId = discordId;
+			Console.WriteLine($"Sent (psim) bridge message for {displayName} (webhook noavatar)");
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Webhook failed, fallback used: {ex.Message}");
+			Console.WriteLine($"Sent (psim) bridge message for {displayName} (fallback)");
+			retry = true;
+		}
+
+		if (!retry)
+		{
+			return;
+		}
+
+		await channel.SendMessageAsync($"-# {displayName}\n{message}", allowedMentions: AllowedMentions.None);
 	}
 
 	private static string RemoveSpecialCharacters(string str) => Regex.Replace(str, "[^a-zA-Z0-9_. ]+", "", RegexOptions.Compiled);
