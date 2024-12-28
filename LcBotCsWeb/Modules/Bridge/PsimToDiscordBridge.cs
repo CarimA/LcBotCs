@@ -65,9 +65,9 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			? (await channel.Guild.GetUserAsync(accountLink.DiscordId)).GetAvatarUrl()
 			: $"https://robohash.org/{RemoveSpecialCharacters(name)}.png";
 
-		var discordTag = accountLink != null && isFromActiveAlt && (_lastDiscordId == null || _lastDiscordId == accountLink.DiscordId) ? $"-# <@{accountLink.DiscordId}>\n" : string.Empty;
+		//var discordTag = accountLink != null && isFromActiveAlt && (_lastDiscordId == null || _lastDiscordId == accountLink.DiscordId) ? $"-# <@{accountLink.DiscordId}>\n" : string.Empty;
 		var displayName = $"{name}{(isMultiRoom ? $" (From {msg.Room.Name})" : string.Empty)}";
-		var output = $"{discordTag}{message}";
+		var output = message; //$"{discordTag}{message}";
 
 		if (_webhook == null)
 		{

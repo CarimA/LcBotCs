@@ -121,11 +121,10 @@ public class DiscordToPsimBridge
 			{
 				var replyTo = await channel.GetMessageAsync(reply.Value);
 				var author = replyTo.Author;
-				var isSelf = author.Id == _discord.Client.CurrentUser.Id;
 
-				if (isSelf)
+				if (author.Id == _discord.Client.CurrentUser.Id)
 				{
-					// this must be from psim
+					// this must be from psim via the fallback method
 					var content = replyTo.CleanContent;
 					var lineSplit = content.Split("\n");
 					var split = lineSplit[0].Split(" - ", StringSplitOptions.TrimEntries);
@@ -135,26 +134,40 @@ public class DiscordToPsimBridge
 				}
 				else
 				{
-					// this must be a discord user
-					var (_, _, replyActiveAlt) = await _altTracking.GetAccountByDiscordId(author.Id);
-
-					if (replyActiveAlt != null)
+					if (author.IsWebhook)
 					{
-						var replyMessage = await CleanMessage(replyTo.Content, channel, config.PsimRoom);
-
-						var replyUserDetails =
-							await _psim.Client.GetUserDetails(replyActiveAlt.PsimId, TimeSpan.FromSeconds(2));
-						var replyRoomRank = replyUserDetails switch
-						{
-							null => Rank.Normal,
-							_ => replyUserDetails.Rooms.TryGetValue(config.PsimRoom, out var rank) ? rank : Rank.Normal
-						};
-
-						var replyDisplayRank = (Rank)Math.Max((int)(replyUserDetails?.GlobalRank ?? Rank.Normal),
-							(int)replyRoomRank);
-						var replyRank = PsimUsername.FromRank(replyDisplayRank).Trim();
+						// this must be from psim via the webhook method
+						var content = replyTo.CleanContent;
+						var lineSplit = content.Split("\n");
+						var replyUser = author.Username;
 						await _psim.Client.Rooms[config.PsimRoom].SendHtml($"reply-{msg.Id}",
-							$"<small>↱ reply to <strong><span class=\"username\">{replyRank}{replyActiveAlt.PsimDisplayName}</span></strong>: {replyMessage}</small>");
+							$"<small>↱ reply to <strong><span class=\"username\">{replyUser}</span></strong>: {lineSplit[1]}</small>");
+					}
+					else
+					{
+						// this must be a discord user
+						var (_, _, replyActiveAlt) = await _altTracking.GetAccountByDiscordId(author.Id);
+
+						if (replyActiveAlt != null)
+						{
+							var replyMessage = await CleanMessage(replyTo.Content, channel, config.PsimRoom);
+
+							var replyUserDetails =
+								await _psim.Client.GetUserDetails(replyActiveAlt.PsimId, TimeSpan.FromSeconds(2));
+							var replyRoomRank = replyUserDetails switch
+							{
+								null => Rank.Normal,
+								_ => replyUserDetails.Rooms.TryGetValue(config.PsimRoom, out var rank)
+									? rank
+									: Rank.Normal
+							};
+
+							var replyDisplayRank = (Rank)Math.Max((int)(replyUserDetails?.GlobalRank ?? Rank.Normal),
+								(int)replyRoomRank);
+							var replyRank = PsimUsername.FromRank(replyDisplayRank).Trim();
+							await _psim.Client.Rooms[config.PsimRoom].SendHtml($"reply-{msg.Id}",
+								$"<small>↱ reply to <strong><span class=\"username\">{replyRank}{replyActiveAlt.PsimDisplayName}</span></strong>: {replyMessage}</small>");
+						}
 					}
 				}
 			}
