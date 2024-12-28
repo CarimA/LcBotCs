@@ -18,7 +18,7 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 	private readonly AltTrackingService _altTracking;
 	private readonly Database _db;
 	private DiscordWebhookClient? _webhook;
-	private string? _lastDiscordId;
+	private ulong? _lastDiscordId;
 
 	public PsimToDiscordBridge(DiscordBotService discord, Configuration config, AltTrackingService altTracking, Database db)
 	{
@@ -38,6 +38,9 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 
 		var message = msg.Message.Trim();
 
+		if (string.IsNullOrEmpty(message))
+			return;
+
 		if (message.StartsWith('/') || message.StartsWith('!'))
 			return;
 
@@ -46,35 +49,25 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 		if (config == null)
 			return;
 
-		var isMultiRoom = _config.BridgedGuilds.Count(linkedGuild => string.Equals(linkedGuild.PsimRoom, msg.Room.Name, StringComparison.InvariantCultureIgnoreCase)) > 1;
-		var name = $"{PsimUsername.FromRank(msg.User.Rank)}{msg.User.DisplayName}".Trim();
-		var psimUserId = (await _altTracking.GetUser(msg.User))?.FirstOrDefault().AltId;
-		var discordId = string.Empty;
-		string? avatarUrl = $"https://robohash.org/{RemoveSpecialCharacters(name)}.png";
-
-		if (psimUserId != null)
-		{
-			// only show a linked username if they're using the alt that's set to display
-			var accountLink = await _db.AccountLinks.Query.FirstOrDefaultAsync(link => link.PsimUser == psimUserId);
-			var alt = await _db.Alts.Query.FirstOrDefaultAsync(alt => alt.AltId == accountLink.PsimUser);
-			if (accountLink != null && alt is { IsActive: true })
-			{
-				discordId = $"{accountLink.DiscordId}";
-			}
-		}
-
-		var displayRoom = isMultiRoom ? $"[{msg.Room.Name}] " : string.Empty;
-		var discordName = string.IsNullOrEmpty(discordId) || _lastDiscordId == discordId ? string.Empty : $"-# <@{discordId}>\n";
-		var displayName = $"{name}{(displayRoom == string.Empty ? string.Empty : $" (From {displayRoom})")}";
-
-		var output = $"{discordName}{message}";
-
-		if (string.IsNullOrEmpty(output))
-			return;
-
 		var guild = _discord.Client.Guilds.FirstOrDefault(g => g.Id == config.GuildId);
 		if (guild?.Channels.FirstOrDefault(c => c.Id == config.BridgeRoom) is not ITextChannel channel)
 			return;
+
+		var isMultiRoom = _config.BridgedGuilds.Count(linkedGuild => string.Equals(linkedGuild.PsimRoom, msg.Room.Name, StringComparison.InvariantCultureIgnoreCase)) > 1;
+		var name = $"{PsimUsername.FromRank(msg.User.Rank)}{msg.User.DisplayName}".Trim();
+
+		var (_, accountLink, activeAlt) = await _altTracking.GetAccountByUsername(msg.User);
+		var isFromActiveAlt = accountLink != null &&
+		                      string.Equals(activeAlt?.PsimId, msg.User.Token,
+			                      StringComparison.InvariantCultureIgnoreCase);
+
+		var avatarUrl = isFromActiveAlt
+			? (await channel.Guild.GetUserAsync(accountLink.DiscordId)).GetAvatarUrl()
+			: $"https://robohash.org/{RemoveSpecialCharacters(name)}.png";
+
+		var discordTag = accountLink != null && isFromActiveAlt && (_lastDiscordId == null || _lastDiscordId == accountLink.DiscordId) ? $"-# <@{accountLink.DiscordId}>\n" : string.Empty;
+		var displayName = $"{name}{(isMultiRoom ? $" (From {msg.Room.Name})" : string.Empty)}";
+		var output = $"{discordTag}{message}";
 
 		if (_webhook == null)
 		{
@@ -89,32 +82,18 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 				_webhook = await OverwriteWebhookConfig(null, channel, guild);
 		}
 
-		if (discordId != string.Empty)
-		{
-			try
-			{
-				var user = await channel.Guild.GetUserAsync(ulong.Parse(discordId), CacheMode.AllowDownload);
-				avatarUrl = user.GetAvatarUrl();
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine(ex.Message);
-				// ignored
-			}
-		}
-
 		var retry = false;
 
 		try
 		{
 			await _webhook.SendMessageAsync(output, username: displayName, avatarUrl: avatarUrl,
 				allowedMentions: AllowedMentions.None);
-			_lastDiscordId = discordId;
 			Console.WriteLine($"Sent (psim) bridge message for {displayName} (webhook)");
+			_lastDiscordId = accountLink?.DiscordId;
 		}
 		catch (Exception ex)
 		{
-			Console.WriteLine($"Webhook failed (output: {output}) (username: {displayName} (avatarUrl: {avatarUrl}), retrying without avatar");
+			Console.WriteLine($"Webhook failed (output: {message}) (username: {displayName} (avatarUrl: {avatarUrl}), retrying without avatar");
 			Console.WriteLine(ex.Message);
 			retry = true;
 		}
@@ -131,8 +110,8 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			// try it without an avatar, let's see if that's the issue...
 			await _webhook.SendMessageAsync(output, username: displayName,
 				allowedMentions: AllowedMentions.None);
-			_lastDiscordId = discordId;
 			Console.WriteLine($"Sent (psim) bridge message for {displayName} (webhook noavatar)");
+			_lastDiscordId = accountLink?.DiscordId;
 		}
 		catch (Exception ex)
 		{
@@ -146,7 +125,8 @@ public class PsimToDiscordBridge : ISubscriber<ChatMessage>
 			return;
 		}
 
-		await channel.SendMessageAsync($"-# {displayName}\n{message}", allowedMentions: AllowedMentions.None);
+		await channel.SendMessageAsync($"-# {displayName}\n{output}", allowedMentions: AllowedMentions.None);
+		_lastDiscordId = accountLink?.DiscordId;
 	}
 
 	private static string RemoveSpecialCharacters(string str) => Regex.Replace(str, "[^a-zA-Z0-9_. ]+", "", RegexOptions.Compiled);

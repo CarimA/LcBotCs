@@ -20,15 +20,15 @@ public class PunishmentTrackingService : ISubscriber<UserLocked>, ISubscriber<Us
 
 	private async Task SetPunishment(PsimUsername username, DateTime? date)
 	{
-		var users = await _altTracking.GetUser(username);
+		var (alts, _, _) = await _altTracking.GetAccountByUsername(username);
 
-		if (users == null)
+		if (alts == null)
 			return;
 
-		foreach (var user in users)
+		foreach (var alt in alts)
 		{
-			user.ActivePunishment = DateTime.UtcNow + TimeSpan.FromDays(30);
-			await _database.Alts.Update(user);
+			alt.ActivePunishment = date;
+			await _database.Alts.Update(alt);
 		}
 	}
 
@@ -42,16 +42,9 @@ public class PunishmentTrackingService : ISubscriber<UserLocked>, ISubscriber<Us
 		await SetPunishment(username, null);
 	}
 
-	public async Task<bool> IsUserPunished(PsimUsername username)
+	public bool IsUserPunished(List<PsimAlt>? alts)
 	{
-		var users = await _altTracking.GetUser(username);
-		return users != null && users.Any(user => user.ActivePunishment > DateTime.UtcNow);
-	}
-
-	public async Task<bool> IsUserPunished(ObjectId id)
-	{
-		var users = await _altTracking.GetUser(id);
-		return users != null && users.Any(user => user.ActivePunishment > DateTime.UtcNow);
+		return alts != null && alts.Any(alt => alt.ActivePunishment > DateTime.UtcNow);
 	}
 
 	public async Task HandleEvent(UserLocked e)

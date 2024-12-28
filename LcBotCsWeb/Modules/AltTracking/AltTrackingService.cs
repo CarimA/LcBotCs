@@ -61,6 +61,56 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 		return true;
 	}
 
+	private async Task<(List<PsimAlt>? Alts, AccountLinkItem? AccountLink, PsimAlt? ActiveUser)> GetAccount(List<PsimAlt>? alts)
+	{
+		var psimUserId = alts?.FirstOrDefault()?.AltId;
+		var activeUser = alts?.FirstOrDefault(psimAlt => psimAlt.IsActive);
+
+		if (psimUserId == null)
+			return (alts, null, activeUser);
+
+		// only show a linked username if they're using the alt that's set to display
+		var accountLink = await _database.AccountLinks.Query.FirstOrDefaultAsync(link => link.PsimUser == psimUserId);
+		return (alts, accountLink, activeUser);
+	}
+
+	public async Task<(List<PsimAlt>? Alts, AccountLinkItem? AccountLink, PsimAlt? ActiveUser)> GetAccountByUsername(PsimUsername user)
+	{
+		var alts = await _database.Alts.Query
+			.Where(alt => alt.PsimId == user.Token)
+			.ToListAsync();
+
+		return await GetAccount(alts);
+	}
+
+	public async Task<(List<PsimAlt>? Alts, AccountLinkItem? AccountLink, PsimAlt? ActiveUser)> GetAccountByDatabaseEntry(ObjectId id)
+	{
+		var alts = await _database.Alts.Query
+			.Where(alts => alts.AltId == id)
+			.ToListAsync();
+
+		return await GetAccount(alts);
+	}
+
+	public async Task<(List<PsimAlt>? Alts, AccountLinkItem? AccountLink, PsimAlt? ActiveUser)> GetAccountByDiscordId(ulong discordId)
+	{
+		var link = await _database.AccountLinks.Query
+			.FirstOrDefaultAsync(link => link.DiscordId == discordId);
+
+		if (link != null)
+		{
+			var id = link.PsimUser;
+			var alts = await _database.Alts.Query
+				.Where(alt => alt.AltId == id)
+				.ToListAsync();
+
+			return (alts, link, alts?.FirstOrDefault(psimAlt => psimAlt.IsActive));
+		}
+
+		return (null, link, null);
+	}
+
+
 	private async Task UpdateNameCasing(List<PsimAlt> alts, PsimUsername username)
 	{
 		foreach (var alt in alts.Where(alt => alt.PsimDisplayName != username.DisplayName))
@@ -132,48 +182,6 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 
 		if (didSomethingChange)
 			Console.WriteLine($"Alts updated ({firstId}) - active: {username.Token} - {string.Join(", ", matchingUsers.Select(user => user.PsimId))}");
-	}
-
-	public async Task<List<PsimAlt>?> GetUser(ObjectId id)
-	{
-		return await _database.Alts.Query
-			.Where(alts => alts.AltId == id)
-			.ToListAsync();
-	}
-
-	public async Task<List<PsimAlt>?> GetUser(PsimUsername username)
-	{
-		return await _database.Alts.Query
-			.Where(alt => alt.PsimId == username.Token)
-			.ToListAsync();
-	}
-
-	public async Task<List<PsimAlt>?> GetUser(ulong discordId)
-	{
-		var links = await _database.AccountLinks.Query
-			.Where(link => link.DiscordId == discordId)
-			.ToListAsync();
-
-		var output = new List<PsimAlt>();
-		foreach (var link in links)
-		{
-			var id = link.PsimUser;
-			var alts = await _database.Alts.Query
-				.Where(alt => alt.AltId == id)
-				.ToListAsync();
-			output.AddRange(alts);
-		}
-		return output;
-	}
-
-	public async Task<PsimAlt?> GetActiveUser(ObjectId id)
-	{
-		return (await GetUser(id))?.FirstOrDefault(user => user.IsActive);
-	}
-
-	public async Task<PsimAlt?> GetActiveUser(PsimUsername username)
-	{
-		return (await GetUser(username))?.FirstOrDefault(user => user.IsActive);
 	}
 
 	public async Task UpdateActiveUser(AccountLinkItem user, PsimAlt chosen)

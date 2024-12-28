@@ -5,6 +5,7 @@ using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
+using PsimCsLib.Models;
 
 namespace LcBotCsWeb.Modules.Misc;
 
@@ -111,15 +112,13 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 	[SlashCommand("checkalts", "Check what Pokémon Showdown accounts you can use when using the bridge channel.")]
 	public async Task CheckAlts()
 	{
-		var user = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == Context.User.Id);
+		var (alts, accountLink, activeUser) = await _altTracking.GetAccountByDiscordId(Context.User.Id);
 
-		if (user == null)
+		if (accountLink == null)
 		{
 			await RespondAsync("You have not linked a Pokémon Showdown account to your Discord account.", ephemeral: true);
 			return;
 		}
-
-		var alts = await _altTracking.GetUser(user.PsimUser);
 
 		if (alts == null || alts.Count == 0)
 		{
@@ -128,22 +127,20 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		}
 
 		var choices = alts.Select(alt => alt.PsimDisplayName);
-		await RespondAsync($"**Here are the alts you can update your display name to:** {string.Join(", ", choices)}", ephemeral: true);
+		await RespondAsync($"**Currently your name is set to display to **{activeUser.PsimDisplayName}**. You can update your display name to: **{string.Join(", ", choices)}", ephemeral: true);
 
 	}
 
 	[SlashCommand("updatealt", "Update your display name on Pokémon Showdown when using the bridge channel.")]
 	public async Task UpdateAlt(string name)
 	{
-		var user = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == Context.User.Id);
+		var (alts, accountLink, activeUser) = await _altTracking.GetAccountByDiscordId(Context.User.Id);
 
-		if (user == null)
+		if (accountLink == null)
 		{
 			await RespondAsync("You have not linked a Pokémon Showdown account to your Discord account.", ephemeral: true);
 			return;
 		}
-
-		var alts = await _altTracking.GetUser(user.PsimUser);
 
 		if (alts == null || alts.Count == 0)
 		{
@@ -160,8 +157,8 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		}
 
 		await RespondAsync("Updating...", ephemeral: true);
-		Console.WriteLine($"Updating {user.DiscordId} display name to {chosen.PsimDisplayName}");
-		await _altTracking.UpdateActiveUser(user, chosen);
+		Console.WriteLine($"Updating {accountLink.DiscordId} display name from {activeUser?.PsimDisplayName} to {chosen.PsimDisplayName}");
+		await _altTracking.UpdateActiveUser(accountLink, chosen);
 		await FollowupAsync("Display name updated.", ephemeral: true);
 	}
 

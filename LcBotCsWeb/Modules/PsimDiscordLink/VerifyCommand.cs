@@ -1,4 +1,5 @@
-﻿using LcBotCsWeb.Modules.Commands;
+﻿using LcBotCsWeb.Modules.AltTracking;
+using LcBotCsWeb.Modules.Commands;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
 
@@ -7,6 +8,7 @@ namespace LcBotCsWeb.Modules.PsimDiscordLink;
 public class VerifyCommand : ICommand
 {
 	private readonly VerificationService _verification;
+	private readonly AltTrackingService _altTracking;
 	private readonly PsimBotService _psim;
 
 	public List<string> Aliases => new List<string>() { "link" };
@@ -17,9 +19,10 @@ public class VerifyCommand : ICommand
 	public bool AllowPrivate => true;
 	public bool AcceptIntro => false;
 
-	public VerifyCommand(VerificationService verification, PsimBotService psim)
+	public VerifyCommand(VerificationService verification, AltTrackingService altTracking, PsimBotService psim)
 	{
 		_verification = verification;
+		_altTracking = altTracking;
 		_psim = psim;
 	}
 
@@ -27,7 +30,9 @@ public class VerifyCommand : ICommand
 	{
 		var token = user.Token;
 
-		if (await _verification.IsUserVerified(user))
+		var (_, accountLink, _) = await _altTracking.GetAccountByUsername(user);
+		
+		if (accountLink != null)
 		{
 			await respond.Send(CommandTarget.Context, "Your Pokémon Showdown username has already been verified.");
 			return;

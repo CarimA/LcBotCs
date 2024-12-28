@@ -54,10 +54,10 @@ public static class Extensions
 			try
 			{
 				var id = ulong.Parse(match.Groups[1].Value);
-				var user = (await altTracking.GetUser(id))?.FirstOrDefault();
+				var (_, _, activeUser) = await altTracking.GetAccountByDiscordId(id);
 
-				if (user != null)
-					return $"<span class=\"username\"><username>{user.PsimDisplayName}</username></span>";
+				if (activeUser != null)
+					return $"<span class=\"username\"><username>{activeUser.PsimDisplayName}</username></span>";
 
 				var discordUser = await channel.GetUserAsync(id);
 

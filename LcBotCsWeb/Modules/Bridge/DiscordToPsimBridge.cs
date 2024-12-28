@@ -54,26 +54,23 @@ public class DiscordToPsimBridge
 		if (config.BridgeRoom != channel.Id)
 			return;
 
-		var user = await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink => accountLink.DiscordId == msg.Author.Id);
+		var (alts, accountLink, activeAlt) = await _altTracking.GetAccountByDiscordId(msg.Author.Id);
 
-		// if the user has not linked their psim account, move on
-		if (user == null)
+		if (accountLink == null)
 		{
 			Console.WriteLine($"Failed to send bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because they do not have a linked account");
 			await msg.AddReactionAsync(new Emoji("⁉️"));
 			return;
 		}
 
-		var psimUser = await _altTracking.GetActiveUser(user.PsimUser);
-
-		if (psimUser == null)
+		if (activeAlt == null)
 		{
-			Console.WriteLine($"Failed to send (discord) bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) with account link {user.PsimUser} because they do not have an associated PS account (hanging reference)");
+			Console.WriteLine($"Failed to send (discord) bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) with account link {accountLink.PsimUser} because they do not have an associated active PS account (hanging reference)");
 			await msg.AddReactionAsync(new Emoji("⁉️"));
 			return;
 		}
 
-		var userDetails = await _psim.Client.GetUserDetails(psimUser.PsimId, TimeSpan.FromSeconds(2));
+		var userDetails = await _psim.Client.GetUserDetails(activeAlt.PsimDisplayName, TimeSpan.FromSeconds(2));
 		var roomRank = userDetails switch
 		{
 			null => Rank.Normal,
@@ -88,7 +85,7 @@ public class DiscordToPsimBridge
 			return;
 		}
 
-		if (await _punishmentTracking.IsUserPunished(user.PsimUser))
+		if (_punishmentTracking.IsUserPunished(alts))
 		{
 			Console.WriteLine(
 				$"Failed to send (discord) bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because they are actively muted/banned");
@@ -139,17 +136,14 @@ public class DiscordToPsimBridge
 				else
 				{
 					// this must be a discord user
-					var replyDiscordUser =
-						await _database.AccountLinks.Query.FirstOrDefaultAsync(accountLink =>
-							accountLink.DiscordId == author.Id);
-					var replyUser = await _altTracking.GetActiveUser(replyDiscordUser.PsimUser);
+					var (_, _, replyActiveAlt) = await _altTracking.GetAccountByDiscordId(author.Id);
 
-					if (replyUser != null)
+					if (replyActiveAlt != null)
 					{
 						var replyMessage = await CleanMessage(replyTo.Content, channel, config.PsimRoom);
 
 						var replyUserDetails =
-							await _psim.Client.GetUserDetails(replyUser.PsimId, TimeSpan.FromSeconds(2));
+							await _psim.Client.GetUserDetails(replyActiveAlt.PsimId, TimeSpan.FromSeconds(2));
 						var replyRoomRank = replyUserDetails switch
 						{
 							null => Rank.Normal,
@@ -160,7 +154,7 @@ public class DiscordToPsimBridge
 							(int)replyRoomRank);
 						var replyRank = PsimUsername.FromRank(replyDisplayRank).Trim();
 						await _psim.Client.Rooms[config.PsimRoom].SendHtml($"reply-{msg.Id}",
-							$"<small>↱ reply to <strong><span class=\"username\">{replyRank}{replyUser.PsimDisplayName}</span></strong>: {replyMessage}</small>");
+							$"<small>↱ reply to <strong><span class=\"username\">{replyRank}{replyActiveAlt.PsimDisplayName}</span></strong>: {replyMessage}</small>");
 					}
 				}
 			}
@@ -174,7 +168,7 @@ public class DiscordToPsimBridge
 		for (var i = 0; i < lines.Length; i++)
 		{
 			var line = lines[i];
-			await SendLine(line, msg, config.PsimRoom, channel, psimRank, psimUser.PsimDisplayName, config.DiscordInviteUrl, i);
+			await SendLine(line, msg, config.PsimRoom, channel, psimRank, activeAlt.PsimDisplayName, config.DiscordInviteUrl, i);
 		}
 	}
 

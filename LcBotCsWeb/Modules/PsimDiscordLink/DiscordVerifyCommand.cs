@@ -35,12 +35,12 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 		}
 
 		var id = user.Id;
-		var psimUser = await _verification.GetVerifiedUserByDiscordId(id);
+		var (_, accountLink, activeUser) = await _altTracking.GetAccountByDiscordId(id);
 
-		if (psimUser != null)
+		if (accountLink != null)
 		{
 			await user.AddRoleAsync(config.RoleId);
-			Console.WriteLine($"{psimUser?.PsimId} has rejoined the server and been given bridge access.");
+			Console.WriteLine($"{activeUser?.PsimId} has rejoined the server and been given bridge access.");
 		}
 	}
 
@@ -66,8 +66,9 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 			return;
 		}
 
-		var psimUser = await _verification.GetVerifiedUserByDiscordId(id);
-		if (psimUser != null)
+		var (_, accountLink, activeUser) = await _altTracking.GetAccountByDiscordId(id);
+
+		if (accountLink != null)
 		{
 			await user.AddRoleAsync(config.RoleId);
 			await RespondAsync("You have already linked a Pokémon Showdown account to your Discord account.", null, false, true);
@@ -85,8 +86,7 @@ public class DiscordVerifyCommand : InteractionModuleBase<SocketInteractionConte
 
 		await _verification.Verify(id, result);
 		await user.AddRoleAsync(config.RoleId);
-		var alts = await _altTracking.GetActiveUser(result.PsimUser);
-		await RespondAsync($"{alts?.PsimDisplayName} on Pokémon Showdown has been linked to your Discord account!", null, false, true);
-		Console.WriteLine($"{alts?.PsimId} has connected their Showdown account to {user.DisplayName}");
+		await RespondAsync($"{activeUser?.PsimDisplayName} on Pokémon Showdown has been linked to your Discord account!", null, false, true);
+		Console.WriteLine($"{activeUser?.PsimId} has connected their Showdown account to {user.DisplayName}");
 	}
 }
