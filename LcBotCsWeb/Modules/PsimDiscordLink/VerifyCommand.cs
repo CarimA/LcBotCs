@@ -11,7 +11,7 @@ public class VerifyCommand : ICommand
 	private readonly AltTrackingService _altTracking;
 	private readonly PsimBotService _psim;
 
-	public List<string> Aliases => new List<string>() { "link" };
+	public List<string> Aliases => new() { "link" };
 	public string HelpText => string.Empty;
 	public Rank RequiredPublicRank => Rank.Administrator;
 	public bool AllowPublic => false;
@@ -31,7 +31,7 @@ public class VerifyCommand : ICommand
 		var token = user.Token;
 
 		var (_, accountLink, _) = await _altTracking.GetAccountByUsername(user);
-		
+
 		if (accountLink != null)
 		{
 			await respond.Send(CommandTarget.Context, "Your Pokémon Showdown username has already been verified.");

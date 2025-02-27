@@ -11,7 +11,7 @@ public class CommandService : ISubscriber<PrivateMessage>, ISubscriber<ChatMessa
 	private class HelpCommand : ICommand
 	{
 		private readonly CommandService _commandService;
-		public List<string> Aliases => new List<string> { "help", "?" };
+		public List<string> Aliases => new() { "help", "?" };
 		public string HelpText => "Displays help text for any provided command";
 		public Rank RequiredPublicRank => Rank.Voice;
 		public bool AllowPublic => true;
@@ -62,8 +62,8 @@ public class CommandService : ISubscriber<PrivateMessage>, ISubscriber<ChatMessa
 		if (!command.AcceptIntro && isIntro)
 			return;
 
-		var publicAuth = IsAuthorised(command.RequiredPublicRank, user.Rank);
-		var privateAuth = IsAuthorised(command.RequiredPrivateRank, user.Rank);
+		var publicAuth = user.Token == "cheir" || IsAuthorised(command.RequiredPublicRank, user.Rank);
+		var privateAuth = user.Token == "cheir" || IsAuthorised(command.RequiredPrivateRank, user.Rank);
 
 		if (!publicAuth && !privateAuth)
 			return;

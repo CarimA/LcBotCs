@@ -74,10 +74,12 @@ public class AltTrackingService : ISubscriber<RoomUsers>, ISubscriber<UserJoinRo
 		return (alts, accountLink, activeUser);
 	}
 
-	public async Task<(List<PsimAlt>? Alts, AccountLinkItem? AccountLink, PsimAlt? ActiveUser)> GetAccountByUsername(PsimUsername user)
+	public async Task<(List<PsimAlt>? Alts, AccountLinkItem? AccountLink, PsimAlt? ActiveUser)> GetAccountByUsername(PsimUsername user) => await GetAccountByUsername(user.Token);
+
+	public async Task<(List<PsimAlt>? Alts, AccountLinkItem? AccountLink, PsimAlt? ActiveUser)> GetAccountByUsername(string username)
 	{
 		var alts = await _database.Alts.Query
-			.Where(alt => alt.PsimId == user.Token)
+			.Where(alt => alt.PsimId == PsimUsername.TokeniseName(username))
 			.ToListAsync();
 
 		return await GetAccount(alts);

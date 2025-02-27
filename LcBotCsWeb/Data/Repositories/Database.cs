@@ -18,6 +18,7 @@ public class Database
 	public Repository<VerificationCodeItem> VerificationCodes { get; }
 	public Repository<PsimAlt> Alts { get; }
 	public Repository<BridgeWebhook> BridgeWebhooks { get; }
+	public Repository<BridgeMessage> BridgeMessages { get; }
 
 	public Database(Configuration config)
 	{
@@ -46,6 +47,7 @@ public class Database
 			VerificationCodes = GetCollection<VerificationCodeItem>("verification-codes");
 			Alts = GetCollection<PsimAlt>("alts");
 			BridgeWebhooks = GetCollection<BridgeWebhook>("bridge-webhooks");
+			BridgeMessages = GetCollection<BridgeMessage>("bridge-messages");
 		}
 		catch (Exception ex)
 		{

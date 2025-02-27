@@ -65,10 +65,13 @@ AddService<AnnouncementCrosspost>();
 AddService<DiscordLogger>();
 AddService<ViabilityRankingsService>();
 AddService<SampleTeamService>();
+AddService<PurgeService>();
 
 AddPsimCommand<ViabilityRankingsCommand>();
 AddPsimCommand<SamplesCommand>();
 AddPsimCommand<VerifyCommand>();
+AddPsimCommand<PurgeCommand>();
+AddPsimCommand<PurgeBanCommand>();
 
 AddPsimService<CommandService>();
 AddPsimService<StartupModule>();

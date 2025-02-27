@@ -2,6 +2,7 @@
 using Discord.WebSocket;
 using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
+using LcBotCsWeb.Modules.PsimDiscordLink;
 using MongoDB.Driver.Linq;
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
@@ -10,22 +11,24 @@ namespace LcBotCsWeb.Modules.Bridge;
 
 public class DiscordToPsimBridge
 {
-	private readonly Database _database;
 	private readonly DiscordBotService _discord;
 	private readonly Configuration _config;
 	private readonly PsimBotService _psim;
 	private readonly AltTrackingService _altTracking;
 	private readonly PunishmentTrackingService _punishmentTracking;
+	private readonly Database _database;
 
-	public DiscordToPsimBridge(Database database, DiscordBotService discord, Configuration config, PsimBotService psim,
-		AltTrackingService altTracking, PunishmentTrackingService punishmentTracking)
+	public const int MaximumLines = 10;
+
+	public DiscordToPsimBridge(DiscordBotService discord, Configuration config, PsimBotService psim,
+		AltTrackingService altTracking, PunishmentTrackingService punishmentTracking, Database database)
 	{
-		_database = database;
 		_discord = discord;
 		_config = config;
 		_psim = psim;
 		_altTracking = altTracking;
 		_punishmentTracking = punishmentTracking;
+		_database = database;
 		discord.Client.MessageReceived += ClientOnMessageReceived;
 	}
 
@@ -70,6 +73,14 @@ public class DiscordToPsimBridge
 			return;
 		}
 
+		if ((await channel.GetUserAsync(msg.Author.Id)).RoleIds.Contains(config.BlockedRoleId))
+		{
+			Console.WriteLine(
+				$"Failed to send (discord) bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because they are blacklisted");
+			await msg.AddReactionAsync(new Emoji("☠️"));
+			return;
+		}
+
 		var userDetails = await _psim.Client.GetUserDetails(activeAlt.PsimDisplayName, TimeSpan.FromSeconds(2));
 		var roomRank = userDetails switch
 		{
@@ -81,7 +92,7 @@ public class DiscordToPsimBridge
 		{
 			Console.WriteLine(
 				$"Failed to send (discord) bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because they are actively locked/muted");
-			await msg.AddReactionAsync(new Emoji("❌"));
+			await msg.AddReactionAsync(new Emoji("☠️"));
 			return;
 		}
 
@@ -89,7 +100,7 @@ public class DiscordToPsimBridge
 		{
 			Console.WriteLine(
 				$"Failed to send (discord) bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because they are actively muted/banned");
-			await msg.AddReactionAsync(new Emoji("❌"));
+			await msg.AddReactionAsync(new Emoji("☠️"));
 			return;
 		}
 
@@ -106,7 +117,7 @@ public class DiscordToPsimBridge
 
 		var lines = msg.Content.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
 
-		if (lines.Length > 16)
+		if (lines.Length > MaximumLines)
 		{
 			Console.WriteLine(
 				$"Failed to send (discord) bridge message for {msg.Author.Username} (ID: {msg.Author.Id}) because the message was too long");
@@ -191,11 +202,21 @@ public class DiscordToPsimBridge
 		if (string.IsNullOrEmpty(message))
 			return;
 
-		var psimId = $"discord-{msg.Id}-{index}";
+		var psimId = ToHtmlId(msg, index);
 		var text = $"<a href=\"{inviteUrl}\"><img src=\"https://lcbotcs-0b1e10f8f000.herokuapp.com/public/discord.png\" width=\"12\" height=\"12\" \\></a> <strong><span class=\"username\"><small>{psimRank}</small><username>{psimName}</username></span>:</strong> <em>{message}</em>";
 		await _psim.Client.Rooms[psimRoom].SendHtml(psimId, text);
+		await _database.BridgeMessages.Insert(new BridgeMessage()
+		{
+			DiscordId = msg.Author.Id,
+			HtmlId = psimId,
+			MessageId = msg.Id,
+			ChannelId = msg.Channel.Id
+		});
+
 		Console.WriteLine($"Sent {msg.Id} (discord) bridge message for {msg.Author.Username} (ID: {msg.Author.Id})");
 	}
+
+	public static string ToHtmlId(IMessage msg, int index) => $"discord_{msg.Id}_{index}";
 
 	private async Task<string> CleanMessage(string message, ITextChannel channel, string psimRoom)
 	{
