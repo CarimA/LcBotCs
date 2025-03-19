@@ -50,13 +50,13 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		if (user.RoleIds.Contains(role))
 		{
 			Console.WriteLine($"{roleName} role removed from {user.DisplayName}");
-			await user.RemoveRoleAsync(MatchesRole);
+			await user.RemoveRoleAsync(role);
 			await RespondAsync(roleRemoved, null, false, true);
 		}
 		else
 		{
 			Console.WriteLine($"{roleName} role assigned to {user.DisplayName}");
-			await user.AddRoleAsync(MatchesRole);
+			await user.AddRoleAsync(role);
 			await RespondAsync(roleAssigned, null, false, true);
 		}
 	}
