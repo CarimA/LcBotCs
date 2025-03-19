@@ -2,62 +2,61 @@
 using PsimCsLib.Entities;
 using PsimCsLib.Enums;
 
-namespace LcBotCsWeb.Modules.SampleTeams
+namespace LcBotCsWeb.Modules.SampleTeams;
+
+public class SamplesCommand : ICommand
 {
-	public class SamplesCommand : ICommand
+	public List<string> Aliases => new() { "samples" };
+	public string HelpText => string.Empty;
+	public Rank RequiredPublicRank => Rank.Voice;
+	public bool AllowPublic => true;
+	public Rank RequiredPrivateRank => Rank.Normal;
+	public bool AllowPrivate => true;
+	public bool AcceptIntro => false;
+
+	private readonly SampleTeamService _sampleTeamService;
+
+	public SamplesCommand(SampleTeamService sampleTeamService)
 	{
-		public List<string> Aliases => new List<string>() { "samples" };
-		public string HelpText => string.Empty;
-		public Rank RequiredPublicRank => Rank.Voice;
-		public bool AllowPublic => true;
-		public Rank RequiredPrivateRank => Rank.Normal;
-		public bool AllowPrivate => true;
-		public bool AcceptIntro => false;
+		_sampleTeamService = sampleTeamService;
+	}
 
-		private readonly SampleTeamService _sampleTeamService;
-
-		public SamplesCommand(SampleTeamService sampleTeamService)
+	public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, CommandResponse respond)
+	{
+		if (!arguments.Any())
 		{
-			_sampleTeamService = sampleTeamService;
+			await respond.Send(CommandTarget.Context, "Please specify a format.");
+			return;
 		}
 
-		public async Task Execute(DateTime timePosted, PsimUsername user, Room? room, List<string> arguments, CommandResponse respond)
+		await respond.SendHtml(CommandTarget.Context, "expanded-samples", "Loading...");
+
+		var results = new List<TeamPreview>();
+
+		try
 		{
-			if (!arguments.Any())
+			foreach (var arg in arguments)
 			{
-				await respond.Send(CommandTarget.Context, "Please specify a format.");
-				return;
+				var teams = await _sampleTeamService.GetFormat(arg.ToLowerInvariant().Trim());
+				if (teams != null)
+					results.AddRange(teams);
 			}
-
-			await respond.SendHtml(CommandTarget.Context, "expanded-samples", "Loading...");
-
-			var results = new List<TeamPreview>();
-
-			try
-			{
-				foreach (var arg in arguments)
-				{
-					var teams = await _sampleTeamService.GetFormat(arg.ToLowerInvariant().Trim());
-					if (teams != null)
-						results.AddRange(teams);
-				}
-			}
-			catch (HttpRequestException)
-			{
-				await respond.SendHtml(CommandTarget.Context, "expanded-samples", "There was an error handling your request. Try again later.");
-			}
-
-			if (!results.Any())
-			{
-				await respond.SendHtml(CommandTarget.Context, "expanded-samples", "No sample teams could be found.");
-				return;
-			}
-
-			if (room != null)
-				results = results.Shuffle().Take(6).ToList();
-
-			var html = results.GenerateHtml();
-			await respond.SendHtml(CommandTarget.Context, "expanded-samples", html);
 		}
+		catch (HttpRequestException)
+		{
+			await respond.SendHtml(CommandTarget.Context, "expanded-samples", "There was an error handling your request. Try again later.");
+		}
+
+		if (!results.Any())
+		{
+			await respond.SendHtml(CommandTarget.Context, "expanded-samples", "No sample teams could be found.");
+			return;
+		}
+
+		if (room != null)
+			results = results.Shuffle().Take(6).ToList();
+
+		var html = results.GenerateHtml();
+		await respond.SendHtml(CommandTarget.Context, "expanded-samples", html);
 	}
 }

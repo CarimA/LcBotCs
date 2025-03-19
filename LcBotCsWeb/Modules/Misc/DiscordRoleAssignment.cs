@@ -5,7 +5,6 @@ using LcBotCsWeb.Data.Repositories;
 using LcBotCsWeb.Modules.AltTracking;
 using MongoDB.Driver;
 using MongoDB.Driver.Linq;
-using PsimCsLib.Models;
 
 namespace LcBotCsWeb.Modules.Misc;
 
@@ -13,6 +12,7 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 {
 	private const ulong LcDiscord = 231275118700003328;
 	private const ulong MatchesRole = 400043115689541632;
+	public const ulong RoomTourRole = 1351901380092104725;
 	private readonly DiscordBotService _discord;
 	private readonly Database _database;
 	private readonly AltTrackingService _altTracking;
@@ -61,7 +61,7 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 		}
 	}
 
-	[SlashCommand("matches", "Toggle the Matches role")]
+	[SlashCommand("matches", "Toggle the Matches role to be notified")]
 	public async Task ToggleMatchesRole()
 	{
 		await ToggleRole(MatchesRole,
@@ -69,6 +69,13 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 			"You have been unassigned the matches role and will no longer be notified of tournament matches.");
 	}
 
+	[SlashCommand("roomtours", "Toggle the room tournaments role to be notified")]
+	public async Task ToggleRoomTours()
+	{
+		await ToggleRole(RoomTourRole,
+			"You have been assigned the matches role and will be notified of tournament matches.",
+			"You have been unassigned the matches role and will no longer be notified of tournament matches.");
+	}
 
 	private DateTime? _baldCheckCooldown;
 

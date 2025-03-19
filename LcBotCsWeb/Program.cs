@@ -6,6 +6,7 @@ using LcBotCsWeb.Modules.AltTracking;
 using LcBotCsWeb.Modules.AnnouncementCrosspost;
 using LcBotCsWeb.Modules.Bridge;
 using LcBotCsWeb.Modules.Commands;
+using LcBotCsWeb.Modules.Misc;
 using LcBotCsWeb.Modules.PsimDiscordLink;
 using LcBotCsWeb.Modules.SampleTeams;
 using LcBotCsWeb.Modules.Startup;
@@ -74,6 +75,7 @@ AddPsimCommand<PurgeCommand>();
 AddPsimCommand<PurgeBanCommand>();
 
 AddPsimService<CommandService>();
+AddPsimService<RoomTournamentsService>();
 AddPsimService<StartupModule>();
 AddPsimService<AltTrackingService>();
 AddPsimService<PsimToDiscordBridge>();
