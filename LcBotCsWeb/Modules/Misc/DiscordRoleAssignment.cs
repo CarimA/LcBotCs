@@ -73,8 +73,8 @@ public class DiscordRoleAssignment : InteractionModuleBase<SocketInteractionCont
 	public async Task ToggleRoomTours()
 	{
 		await ToggleRole(RoomTourRole,
-			"You have been assigned the matches role and will be notified of tournament matches.",
-			"You have been unassigned the matches role and will no longer be notified of tournament matches.");
+			"You have been assigned the room tour role and will be notified of room tournaments.",
+			"You have been unassigned the room tour role and will no longer be notified of room tournaments.");
 	}
 
 	private DateTime? _baldCheckCooldown;
