@@ -32,8 +32,8 @@ public class RoomTournamentsService : ISubscriber<TournamentCreated>
 		var guild = _discord.Client.Guilds.FirstOrDefault(g => g.Id == config.GuildId);
 		if (guild?.Channels.FirstOrDefault(c => c.Id == config.BridgeRoom) is ITextChannel channel)
 		{
-			await channel.SendMessageAsync($"<@&{DiscordRoleAssignment.RoomTourRole}> A {e.Format} is starting on [Pokémon Showdown](https://play.pokemonshowdown.com/{e.Room.Name}).\n-# (Use the `/roomtours` command to be notified when room tournaments start)",
-				allowedMentions: AllowedMentions.All);
+			await channel.SendMessageAsync($"<@&{DiscordRoleAssignment.RoomTourRole}> A {e.Format} room tournament is starting on [Pokémon Showdown](https://play.pokemonshowdown.com/{e.Room.Name}).\n-# (Use the `/roomtours` command to be notified when room tournaments start)",
+				allowedMentions: null);
 		}
 
 		var samples = await _sampleTeamService.GetFormat(e.Format);
